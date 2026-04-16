@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ApplicationType {
+  WALLET_BANK_AGENT
+  AGENT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  mobile    String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applications Application[]
+}
+
+model Application {
+  id        String          @id @default(cuid())
+  type      ApplicationType
+  status    String          @default("DRAFT")
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Step 1 (Primary Info)
+  firstName      String?
+  lastName       String?
+  address        String?
+  country        String?
+  whatsappNumber String?
+  mobileNumber   String?
+  telegramId     String?
+  documentUrl    String?
+  profilePicUrl  String?
+
+  // Step 2 (Wallet/Bank or Platform Details)
+  bankDetails     BankDetails?
+  walletDetails   WalletDetails?
+  platformDetails PlatformDetails?
+
+  // Step 3 (Brand relation)
+  brandRelation BrandRelation?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BankDetails {
+  id             String   @id @default(cuid())
+  applicationId  String   @unique
+  application    Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  accountNumber  String?
+  ifscCode       String?
+  bankName       String?
+  holderName     String?
+  branchName     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WalletDetails {
+  id            String   @id @default(cuid())
+  applicationId String   @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  provider   String?
+  walletId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlatformDetails {
+  id            String   @id @default(cuid())
+  applicationId String   @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  platformName   String?
+  platformLink   String?
+  usersRange     String?
+  turnoverRange  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BrandRelation {
+  id            String   @id @default(cuid())
+  applicationId String   @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  usernameInPlatform       String?
+  hadPreviousTransaction   Boolean?
+  transactionId            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
