@@ -134,17 +134,7 @@ export function ApplicationWizard({
                     try {
                       setError(null);
                       setSaving(true);
-                      const resp = await patchApplication({ primaryInfo: values });
-                      const generatedPassword = resp?.generatedPassword as
-                        | string
-                        | undefined;
-                      if (generatedPassword) {
-                        setSubmitModal({
-                          open: true,
-                          kind: "success",
-                          message: `Account created. Your 5-digit password is ${generatedPassword}.`,
-                        });
-                      }
+                      await patchApplication({ primaryInfo: values });
                       setStep(2);
                     } catch (e: any) {
                       const fe = e?.fieldErrors as

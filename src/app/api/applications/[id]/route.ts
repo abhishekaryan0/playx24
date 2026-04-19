@@ -51,7 +51,6 @@ export async function PATCH(
   }
 
   const data: any = {};
-  let generatedPassword: string | null = null;
 
   if (body.status !== undefined) data.status = body.status;
   if (body.primaryInfo) {
@@ -87,16 +86,11 @@ export async function PATCH(
     Object.assign(data, body.primaryInfo);
 
     // Ensure a User exists for this mobile and link application -> user.
-    // Password is a random 5-digit string for new users.
+    // Password auth disabled for applicants for now (empty password; login is mobile-only).
     const normalizeMobile = (value: string) =>
       value.replace(/\s+/g, "").replace(/^\+/, "");
 
     const mobile = normalizeMobile(mobileNumber);
-
-    const random5 = () =>
-      Math.floor(Math.random() * 100000)
-        .toString()
-        .padStart(5, "0");
 
     const existing = await prisma.user.findUnique({
       where: { mobile },
@@ -104,9 +98,8 @@ export async function PATCH(
     });
 
     if (!existing) {
-      generatedPassword = random5();
       const created = await prisma.user.create({
-        data: { mobile, password: generatedPassword },
+        data: { mobile, password: "" },
         select: { id: true },
       });
       data.userId = created.id;
@@ -180,10 +173,7 @@ export async function PATCH(
       data,
       select: { id: true },
     });
-    return NextResponse.json({
-      ...updated,
-      generatedPassword: generatedPassword ?? undefined,
-    });
+    return NextResponse.json(updated);
   } catch (e: any) {
     return NextResponse.json(
       { error: "Failed to update application" },

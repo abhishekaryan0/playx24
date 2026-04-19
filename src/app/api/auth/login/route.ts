@@ -11,11 +11,8 @@ export async function POST(req: Request) {
   const mobile = body?.mobile?.trim();
   const password = body?.password ?? "";
 
-  if (!mobile || !password) {
-    return NextResponse.json(
-      { error: "Missing mobile or password" },
-      { status: 400 },
-    );
+  if (!mobile) {
+    return NextResponse.json({ error: "Missing mobile" }, { status: 400 });
   }
 
   const user = await prisma.user.findUnique({
@@ -23,11 +20,17 @@ export async function POST(req: Request) {
     select: { id: true, mobile: true, password: true, createdAt: true },
   });
 
-  if (!user || user.password !== password) {
+  if (!user) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
-  // Session/cookies not implemented yet; this just validates.
+  // Mobile-only login when password is not set; otherwise verify password (legacy accounts).
+  if (user.password) {
+    if (user.password !== password) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+  }
+
   return NextResponse.json({ id: user.id, mobile: user.mobile });
 }
 
