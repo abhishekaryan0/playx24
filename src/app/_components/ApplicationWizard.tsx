@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  combineDialAndLocal,
+  DEFAULT_PHONE_DIAL,
+  digitsOnly,
+  PHONE_DIAL_CODES,
+} from "@/lib/phone";
 import { ApplicationHeader } from "./ApplicationHeader";
 import { StepsSidebar, type WizardStep } from "./StepsSidebar";
 
@@ -197,7 +203,7 @@ export function ApplicationWizard({
                       setSaving(true);
                       await patchApplication({
                         brandRelation: values,
-                        status: "SUBMITTED",
+                        status: "PENDING",
                       });
                       setSubmitModal({
                         open: true,
@@ -335,10 +341,32 @@ function PrimaryInfoStep({
         const fd = new FormData(form);
 
         const firstName = ((fd.get("firstName") as string) ?? "").trim();
-        const mobileNumber = ((fd.get("mobileNumber") as string) ?? "").trim();
+        const lastName = ((fd.get("lastName") as string) ?? "").trim();
+        const address = ((fd.get("address") as string) ?? "").trim();
+        const country = ((fd.get("country") as string) ?? "").trim();
+        const telegramId = ((fd.get("telegramId") as string) ?? "").trim();
+        const whatsappLocal = ((fd.get("whatsappLocal") as string) ?? "").trim();
+        const mobileLocal = ((fd.get("mobileLocal") as string) ?? "").trim();
+        const whatsappFull = combineDialAndLocal(
+          String(fd.get("whatsappDial") ?? DEFAULT_PHONE_DIAL),
+          whatsappLocal,
+        );
+        const mobileNumber = combineDialAndLocal(
+          String(fd.get("mobileDial") ?? DEFAULT_PHONE_DIAL),
+          mobileLocal,
+        );
         const nextErrors: Record<string, string> = {};
         if (!firstName) nextErrors.firstName = "First name is required";
-        if (!mobileNumber) nextErrors.mobileNumber = "Mobile number is required";
+        if (!lastName) nextErrors.lastName = "Last name is required";
+        if (!address) nextErrors.address = "Address is required";
+        if (!country) nextErrors.country = "Country is required";
+        if (!digitsOnly(whatsappLocal))
+          nextErrors.whatsappNumber = "Whatsapp number is required";
+        if (!digitsOnly(mobileLocal))
+          nextErrors.mobileNumber = "Mobile number is required";
+        if (!telegramId) nextErrors.telegramId = "Telegram ID is required";
+        if (!documentFile) nextErrors.document = "Document is required";
+        if (!profileFile) nextErrors.profilePic = "Profile picture is required";
         if (!accepted) nextErrors.accepted = "Please accept Terms & Conditions";
         setFieldErrors(nextErrors);
         if (Object.keys(nextErrors).length > 0) return;
@@ -358,13 +386,13 @@ function PrimaryInfoStep({
         const profilePicUrl = await upload("profile", profileFile);
 
         await onContinue({
-          firstName: firstName || undefined,
-          lastName: (fd.get("lastName") as string) || undefined,
-          address: (fd.get("address") as string) || undefined,
-          country: (fd.get("country") as string) || undefined,
-          whatsappNumber: (fd.get("whatsappNumber") as string) || undefined,
-          mobileNumber: mobileNumber || undefined,
-          telegramId: (fd.get("telegramId") as string) || undefined,
+          firstName,
+          lastName,
+          address,
+          country,
+          whatsappNumber: whatsappFull,
+          mobileNumber,
+          telegramId,
           documentUrl,
           profilePicUrl,
         });
@@ -377,27 +405,55 @@ function PrimaryInfoStep({
           placeholder="Enter First name"
           error={fieldErrors.firstName}
         />
-        <Field name="lastName" label="Last Name" placeholder="Enter Last name" />
-        <Field name="address" label="Address" placeholder="Enter address" />
-        <SelectField name="country" label="Country" placeholder="Select your Country" />
-        <PhoneField name="whatsappNumber" label="Whatsapp Number" />
+        <Field
+          name="lastName"
+          label="Last Name"
+          placeholder="Enter Last name"
+          error={fieldErrors.lastName}
+        />
+        <Field
+          name="address"
+          label="Address"
+          placeholder="Enter address"
+          error={fieldErrors.address}
+        />
+        <SelectField
+          name="country"
+          label="Country"
+          placeholder="Select your Country"
+          error={fieldErrors.country}
+        />
         <PhoneField
-          name="mobileNumber"
+          dialName="whatsappDial"
+          numberName="whatsappLocal"
+          label="Whatsapp Number"
+          error={fieldErrors.whatsappNumber}
+        />
+        <PhoneField
+          dialName="mobileDial"
+          numberName="mobileLocal"
           label="Mobile Number"
           error={fieldErrors.mobileNumber}
         />
-        <Field name="telegramId" label="Telegram ID" placeholder="@telegramID" />
+        <Field
+          name="telegramId"
+          label="Telegram ID"
+          placeholder="@telegramID"
+          error={fieldErrors.telegramId}
+        />
       </div>
 
       <UploadCard
         label="Upload Document"
         buttonLabel="Upload Document"
         onFileSelected={setDocumentFile}
+        error={fieldErrors.document}
       />
       <UploadCard
         label="Upload Profile Pic"
         buttonLabel="Upload Document"
         onFileSelected={setProfileFile}
+        error={fieldErrors.profilePic}
       />
 
       <label className="flex items-start gap-2 text-xs text-zinc-500">
@@ -610,6 +666,7 @@ function BrandRelationStep({
   const [hadPreviousTransaction, setHadPreviousTransaction] = useState<
     "yes" | "no"
   >("yes");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   return (
     <form
@@ -617,11 +674,24 @@ function BrandRelationStep({
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
+        const usernameInPlatform = (
+          (fd.get("usernameInPlatform") as string) ?? ""
+        ).trim();
+        const transactionId = ((fd.get("transactionId") as string) ?? "").trim();
+        const next: Record<string, string> = {};
+        if (!usernameInPlatform) {
+          next.usernameInPlatform = "Username in platform is required";
+        }
+        if (!transactionId) {
+          next.transactionId = "Transaction ID is required";
+        }
+        setFieldErrors(next);
+        if (Object.keys(next).length > 0) return;
+
         onSubmit({
-          usernameInPlatform:
-            (fd.get("usernameInPlatform") as string) || undefined,
+          usernameInPlatform,
           hadPreviousTransaction: hadPreviousTransaction === "yes",
-          transactionId: (fd.get("transactionId") as string) || undefined,
+          transactionId,
         });
       }}
     >
@@ -629,6 +699,7 @@ function BrandRelationStep({
         name="usernameInPlatform"
         label="Username in Platform"
         placeholder="Enter platform username"
+        error={fieldErrors.usernameInPlatform}
       />
 
       <div className="space-y-2">
@@ -663,6 +734,7 @@ function BrandRelationStep({
         name="transactionId"
         label="Enter Transaction ID"
         placeholder="Enter transaction id"
+        error={fieldErrors.transactionId}
       />
 
       <button
@@ -878,10 +950,12 @@ function SelectField({
   name,
   label,
   placeholder,
+  error,
 }: {
   name: string;
   label: string;
   placeholder: string;
+  error?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -889,10 +963,17 @@ function SelectField({
       <div className="relative">
         <select
           name={name}
-          className="h-10 w-full appearance-none rounded-md bg-zinc-100/60 px-3 pr-10 text-sm text-zinc-500 outline-none ring-1 ring-inset ring-zinc-200 focus:bg-white focus:ring-emerald-600/20"
+          className={[
+            "h-10 w-full appearance-none rounded-md bg-zinc-100/60 px-3 pr-10 text-sm text-zinc-500 outline-none ring-1 ring-inset focus:bg-white",
+            error
+              ? "ring-red-300 focus:ring-red-500/30"
+              : "ring-zinc-200 focus:ring-emerald-600/20",
+          ].join(" ")}
         >
           <option value="">{placeholder}</option>
+          <option value="BD">Bangladesh</option>
           <option value="IN">India</option>
+          <option value="PK">Pakistan</option>
           <option value="US">United States</option>
           <option value="GB">United Kingdom</option>
         </select>
@@ -907,6 +988,7 @@ function SelectField({
           <path d="M5.5 7.5l4.5 5 4.5-5H5.5z" />
         </svg>
       </div>
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>
   );
 }
@@ -953,11 +1035,13 @@ function SelectInput({
 }
 
 function PhoneField({
-  name,
+  dialName,
+  numberName,
   label,
   error,
 }: {
-  name: string;
+  dialName: string;
+  numberName: string;
   label: string;
   error?: string;
 }) {
@@ -972,24 +1056,36 @@ function PhoneField({
             : "ring-zinc-200 focus-within:ring-emerald-600/20",
         ].join(" ")}
       >
-        <div className="flex items-center gap-2 border-r border-zinc-200 px-3 text-sm text-zinc-500">
-          <span>+91</span>
+        <div className="relative shrink-0 border-r border-zinc-200">
+          <select
+            name={dialName}
+            defaultValue={DEFAULT_PHONE_DIAL}
+            aria-label={`${label} country code`}
+            className="h-10 min-w-[5.25rem] appearance-none bg-transparent py-0 pl-3 pr-7 text-sm text-zinc-700 outline-none"
+          >
+            {PHONE_DIAL_CODES.map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </select>
           <svg
             width="12"
             height="12"
             viewBox="0 0 20 20"
             fill="currentColor"
-            className="text-zinc-400"
+            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400"
             aria-hidden="true"
           >
             <path d="M5.5 7.5l4.5 5 4.5-5H5.5z" />
           </svg>
         </div>
         <input
-          name={name}
+          name={numberName}
           inputMode="numeric"
+          autoComplete="tel-national"
           placeholder="00000 - 00000"
-          className="w-full bg-transparent px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
+          className="min-w-0 flex-1 bg-transparent px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
         />
       </div>
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
@@ -1001,10 +1097,12 @@ function UploadCard({
   label,
   buttonLabel,
   onFileSelected,
+  error,
 }: {
   label: string;
   buttonLabel: string;
   onFileSelected: (file: File | null) => void;
+  error?: string;
 }) {
   const [filename, setFilename] = useState<string | null>(null);
   const inputId = `upload-${label.replace(/\s+/g, "-").toLowerCase()}`;
@@ -1013,7 +1111,10 @@ function UploadCard({
     <div className="space-y-2">
       <p className="text-xs font-semibold text-zinc-600">{label}</p>
       <div
-        className="rounded-lg border border-dashed border-zinc-200 bg-white px-4 py-8"
+        className={[
+          "rounded-lg border border-dashed bg-white px-4 py-8",
+          error ? "border-red-300" : "border-zinc-200",
+        ].join(" ")}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -1065,6 +1166,7 @@ function UploadCard({
           ) : null}
         </div>
       </div>
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>
   );
 }

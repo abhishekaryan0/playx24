@@ -1,12 +1,5 @@
-import { ApplicationWizard } from "../_components/ApplicationWizard";
+import { redirect } from "next/navigation";
 
-export default function ApplicationForAgentPage() {
-  return (
-    <ApplicationWizard
-      headerHighlightText="Agent"
-      headerSuffixText=""
-      variant="agent"
-    />
-  );
+export default function ApplicationForAgentRedirect() {
+  redirect("/apply/referral");
 }
-

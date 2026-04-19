@@ -1,9 +1,16 @@
- "use client";
+"use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
+import {
+  combineDialAndLocal,
+  DEFAULT_PHONE_DIAL,
+  PHONE_DIAL_CODES,
+} from "@/lib/phone";
 
 export default function LoginPage() {
+  const [dialCode, setDialCode] = useState(DEFAULT_PHONE_DIAL);
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -84,10 +91,11 @@ export default function LoginPage() {
                 try {
                   setStatus("loading");
                   setMessage(null);
+                  const mobileFull = combineDialAndLocal(dialCode, mobile);
                   const res = await fetch("/api/auth/login", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ mobile, password }),
+                    body: JSON.stringify({ mobile: mobileFull, password }),
                   });
                   const data = (await res.json().catch(() => null)) as
                     | { id: string; mobile: string }
@@ -96,7 +104,7 @@ export default function LoginPage() {
 
                   if (!res.ok) {
                     setStatus("error");
-                    setMessage((data as any)?.error ?? "Login failed");
+                    setMessage((data as { error?: string })?.error ?? "Login failed");
                     return;
                   }
 
@@ -118,14 +126,25 @@ export default function LoginPage() {
                   Mobile Number
                 </label>
                 <div className="flex h-11 overflow-hidden rounded-md border border-zinc-200 bg-white focus-within:ring-2 focus-within:ring-emerald-600/20">
-                  <div className="flex items-center gap-2 border-r border-zinc-200 px-3 text-sm text-zinc-600">
-                    <span>+91</span>
+                  <div className="relative shrink-0 border-r border-zinc-200">
+                    <select
+                      value={dialCode}
+                      onChange={(e) => setDialCode(e.target.value)}
+                      aria-label="Mobile country code"
+                      className="h-11 min-w-[5.25rem] appearance-none bg-transparent py-0 pl-3 pr-7 text-sm text-zinc-700 outline-none"
+                    >
+                      {PHONE_DIAL_CODES.map((code) => (
+                        <option key={code} value={code}>
+                          {code}
+                        </option>
+                      ))}
+                    </select>
                     <svg
                       width="12"
                       height="12"
                       viewBox="0 0 20 20"
                       fill="currentColor"
-                      className="text-zinc-400"
+                      className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400"
                       aria-hidden="true"
                     >
                       <path d="M5.5 7.5l4.5 5 4.5-5H5.5z" />
@@ -135,8 +154,9 @@ export default function LoginPage() {
                     id="mobile"
                     name="mobile"
                     inputMode="numeric"
+                    autoComplete="tel-national"
                     placeholder="00000 - 00000"
-                    className="w-full px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
+                    className="min-w-0 flex-1 px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
                   />
@@ -202,10 +222,24 @@ export default function LoginPage() {
                 {status === "loading" ? "Logging in..." : "Login"}
               </button>
             </form>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <Link
+                href="/apply/wallet"
+                className="inline-flex h-11 items-center justify-center rounded-md border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/25"
+              >
+                Apply for Wallet agent
+              </Link>
+              <Link
+                href="/apply/referral"
+                className="inline-flex h-11 items-center justify-center rounded-md border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/25"
+              >
+                Apply for Referral agent
+              </Link>
+            </div>
           </div>
         </main>
       </div>
     </div>
   );
 }
-

@@ -56,12 +56,26 @@ export async function PATCH(
   if (body.status !== undefined) data.status = body.status;
   if (body.primaryInfo) {
     const fieldErrors: Record<string, string> = {};
-    const firstName = body.primaryInfo.firstName?.trim() ?? "";
-    const mobileNumber = body.primaryInfo.mobileNumber?.trim() ?? "";
+    const pi = body.primaryInfo;
+    const firstName = pi.firstName?.trim() ?? "";
+    const lastName = pi.lastName?.trim() ?? "";
+    const address = pi.address?.trim() ?? "";
+    const country = pi.country?.trim() ?? "";
+    const whatsappNumber = pi.whatsappNumber?.trim() ?? "";
+    const mobileNumber = pi.mobileNumber?.trim() ?? "";
+    const telegramId = pi.telegramId?.trim() ?? "";
+    const documentUrl = pi.documentUrl?.trim() ?? "";
+    const profilePicUrl = pi.profilePicUrl?.trim() ?? "";
 
-    // Primary Info required fields
     if (!firstName) fieldErrors.firstName = "First name is required";
+    if (!lastName) fieldErrors.lastName = "Last name is required";
+    if (!address) fieldErrors.address = "Address is required";
+    if (!country) fieldErrors.country = "Country is required";
+    if (!whatsappNumber) fieldErrors.whatsappNumber = "Whatsapp number is required";
     if (!mobileNumber) fieldErrors.mobileNumber = "Mobile number is required";
+    if (!telegramId) fieldErrors.telegramId = "Telegram ID is required";
+    if (!documentUrl) fieldErrors.documentUrl = "Document upload is required";
+    if (!profilePicUrl) fieldErrors.profilePicUrl = "Profile picture upload is required";
 
     if (Object.keys(fieldErrors).length > 0) {
       return NextResponse.json(
@@ -129,6 +143,29 @@ export async function PATCH(
   }
 
   if (body.brandRelation) {
+    const fieldErrors: Record<string, string> = {};
+    const br = body.brandRelation;
+    const usernameInPlatform = br.usernameInPlatform?.trim() ?? "";
+    const transactionId = br.transactionId?.trim() ?? "";
+
+    if (!usernameInPlatform) {
+      fieldErrors.usernameInPlatform = "Username in platform is required";
+    }
+    if (typeof br.hadPreviousTransaction !== "boolean") {
+      fieldErrors.hadPreviousTransaction =
+        "Please indicate if you had a previous transaction";
+    }
+    if (!transactionId) {
+      fieldErrors.transactionId = "Transaction ID is required";
+    }
+
+    if (Object.keys(fieldErrors).length > 0) {
+      return NextResponse.json(
+        { error: "Missing required fields", fieldErrors },
+        { status: 400 },
+      );
+    }
+
     data.brandRelation = {
       upsert: {
         create: body.brandRelation,
