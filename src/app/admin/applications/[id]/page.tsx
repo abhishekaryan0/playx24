@@ -1,12 +1,15 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { applicationTypeLabel } from "@/lib/application-type";
 import {
   isPendingReview,
   statusDisplayLabel,
 } from "@/lib/application-status";
+import { AdminHeader } from "../../_components/AdminHeader";
 
 type ApplicationDetail = {
   id: string;
@@ -99,11 +102,13 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-      <h2 className="border-b border-zinc-100 pb-2 text-sm font-semibold uppercase tracking-wide text-emerald-800">
-        {title}
-      </h2>
-      <div className="mt-4 space-y-3 text-sm">{children}</div>
+    <section className="overflow-hidden rounded-2xl border border-emerald-900/10 bg-white shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
+      <div className="border-b border-emerald-900/10 bg-[#1b4332]/[0.05] px-5 py-3">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-[#1b4332]">
+          {title}
+        </h2>
+      </div>
+      <div className="space-y-3 p-5 text-sm">{children}</div>
     </section>
   );
 }
@@ -125,7 +130,6 @@ function Field({
 
 export default function AdminApplicationViewPage() {
   const params = useParams();
-  const router = useRouter();
   const id = typeof params.id === "string" ? params.id : "";
 
   const [sessionOk, setSessionOk] = useState<boolean | null>(null);
@@ -195,22 +199,41 @@ export default function AdminApplicationViewPage() {
 
   if (sessionOk === false) {
     return (
-      <div className="min-h-[100dvh] bg-zinc-100 px-4 py-16 text-center">
-        <p className="text-zinc-600">Please log in to view this page.</p>
-        <Link
-          href="/admin"
-          className="mt-4 inline-block text-emerald-700 underline"
-        >
-          Go to admin login
-        </Link>
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-6 bg-gradient-to-b from-emerald-50/50 via-white to-zinc-50 px-4 py-16 text-center">
+        <Image
+          src="/images/play24x-logo.png"
+          alt="Play24X"
+          width={160}
+          height={64}
+          className="h-12 w-auto opacity-90"
+        />
+        <div className="max-w-sm rounded-2xl border border-emerald-900/10 bg-white p-8 shadow-lg ring-1 ring-emerald-900/[0.04]">
+          <p className="text-sm text-zinc-600">
+            Sign in to the admin console to view this application.
+          </p>
+          <Link
+            href="/admin"
+            className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-lg bg-emerald-800 text-sm font-semibold text-white hover:bg-emerald-900"
+          >
+            Go to admin login
+          </Link>
+        </div>
       </div>
     );
   }
 
   if (sessionOk === null || !app) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-zinc-100 text-sm text-zinc-500">
-        {loadError ?? "Loading…"}
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-5 bg-gradient-to-b from-emerald-50/50 via-white to-zinc-50">
+        <Image
+          src="/images/play24x-logo.png"
+          alt="Play24X"
+          width={120}
+          height={48}
+          className="h-10 w-auto opacity-90"
+        />
+        <div className="h-9 w-9 animate-spin rounded-full border-2 border-emerald-200 border-t-[#1b4332]" />
+        <p className="text-sm text-zinc-500">{loadError ?? "Loading…"}</p>
       </div>
     );
   }
@@ -219,23 +242,17 @@ export default function AdminApplicationViewPage() {
   const pending = isPendingReview(app.status);
 
   return (
-    <div className="min-h-[100dvh] bg-zinc-100 pb-16">
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 px-4 py-4">
-          <div>
-            <button
-              type="button"
-              onClick={() => router.push("/admin")}
-              className="text-sm text-emerald-700 hover:underline"
-            >
-              ← Back to list
-            </button>
-            <h1 className="mt-2 text-lg font-semibold text-zinc-900">
-              Application details
-            </h1>
-            <p className="font-mono text-xs text-zinc-500">{app.id}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+    <div className="min-h-[100dvh] bg-gradient-to-b from-emerald-50/35 via-white to-zinc-50/90 pb-16">
+      <AdminHeader
+        maxWidth="4xl"
+        title="Application details"
+        description="Full submission including documents and linked account."
+        back={{ href: "/admin", label: "Back to applications" }}
+        meta={
+          <p className="font-mono text-[11px] text-zinc-400">{app.id}</p>
+        }
+        actions={
+          <>
             <StatusPill status={app.status} />
             {pending ? (
               <>
@@ -243,7 +260,7 @@ export default function AdminApplicationViewPage() {
                   type="button"
                   disabled={busy}
                   onClick={() => updateStatus("APPROVED")}
-                  className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+                  className="rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"
                 >
                   Approve
                 </button>
@@ -251,7 +268,7 @@ export default function AdminApplicationViewPage() {
                   type="button"
                   disabled={busy}
                   onClick={() => updateStatus("REJECTED")}
-                  className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  className="rounded-lg border border-red-200 bg-white px-3.5 py-2 text-sm font-semibold text-red-700 shadow-sm transition hover:bg-red-50 disabled:opacity-50"
                 >
                   Reject
                 </button>
@@ -262,27 +279,27 @@ export default function AdminApplicationViewPage() {
                 type="button"
                 disabled={busy}
                 onClick={() => updateStatus("PENDING")}
-                className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-medium text-amber-900 transition hover:bg-amber-100 disabled:opacity-50"
               >
                 Mark pending
               </button>
             ) : null}
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {loadError ? (
-        <div className="mx-auto max-w-4xl px-4 pt-4">
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div className="mx-auto max-w-4xl px-4 pt-4 sm:px-6">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
             {loadError}
           </div>
         </div>
       ) : null}
 
-      <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+      <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
         <Section title="Overview">
           <Field label="Applicant" value={name} />
-          <Field label="Application type" value={app.type.replace(/_/g, " ")} />
+          <Field label="Type" value={applicationTypeLabel(app.type)} />
           <Field
             label="Status"
             value={statusDisplayLabel(app.status)}
@@ -395,15 +412,15 @@ function StatusPill({ status }: { status: string }) {
   const s = status.toUpperCase();
   const cls =
     s === "APPROVED"
-      ? "bg-emerald-100 text-emerald-900"
+      ? "bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/80"
       : s === "REJECTED"
-        ? "bg-red-100 text-red-900"
+        ? "bg-red-100 text-red-900 ring-1 ring-red-200/80"
         : isPendingReview(status)
-          ? "bg-amber-100 text-amber-900"
-          : "bg-zinc-100 text-zinc-700";
+          ? "bg-amber-100 text-amber-900 ring-1 ring-amber-200/80"
+          : "bg-zinc-100 text-zinc-700 ring-1 ring-zinc-200/80";
   return (
     <span
-      className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${cls}`}
+      className={`inline-flex rounded-full px-3 py-1.5 text-sm font-semibold ${cls}`}
     >
       {statusDisplayLabel(status)}
     </span>

@@ -5,6 +5,8 @@
   --foreground: #171717;
   --app-bg: #ffffff;
   --app-surface: #ffffff;
+  /* Aligns with ApplicationHeader strip */
+  --admin-brand: #1b4332;
 }
 
 @theme inline {
