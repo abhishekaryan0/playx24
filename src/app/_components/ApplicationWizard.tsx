@@ -81,14 +81,14 @@ export function ApplicationWizard({
 
   return (
     <div className="min-h-[100dvh] bg-[var(--app-bg)]">
-      <div className="mx-auto min-h-[100dvh] w-full max-w-[1200px] bg-[var(--app-surface)]">
+      <div className="mx-auto min-h-[100dvh] w-full max-w-[1200px] bg-[var(--app-surface)] pb-[max(0.5rem,var(--safe-bottom))]">
         <ApplicationHeader
           highlightText={headerHighlightText}
           suffixText={headerSuffixText}
           actions={headerActions}
         />
 
-        <div className="grid gap-8 px-10 pb-14 pt-5 lg:grid-cols-[320px_1fr]">
+        <div className="grid gap-6 px-4 pb-10 pt-4 sm:gap-8 sm:px-6 sm:pb-14 sm:pt-5 lg:grid-cols-[minmax(0,320px)_1fr] lg:px-10">
           <StepsSidebar
             step={step}
             onStepChange={setStep}
@@ -103,9 +103,9 @@ export function ApplicationWizard({
           />
 
           <main>
-            <div className="rounded-xl border border-zinc-200 bg-[var(--app-surface)] shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-              <div className="border-b border-zinc-200 px-6 py-4">
-                <div className="flex items-center justify-between gap-4">
+            <div className="rounded-none border border-zinc-200 bg-[var(--app-surface)] shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:rounded-xl">
+              <div className="border-b border-zinc-200 px-4 py-3 sm:px-6 sm:py-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <p className="text-sm font-semibold text-emerald-700">
                     {step === 1
                       ? "Primary Info"
@@ -114,7 +114,7 @@ export function ApplicationWizard({
                         : step3PanelTitle}
                   </p>
                   {applicationId ? (
-                    <span className="text-xs text-zinc-400">
+                    <span className="shrink-0 text-xs text-zinc-400">
                       Application ID: {applicationId.slice(0, 8)}…
                     </span>
                   ) : null}
@@ -122,7 +122,7 @@ export function ApplicationWizard({
               </div>
 
               {error ? (
-                <div className="border-b border-zinc-200 bg-red-50 px-6 py-3 text-sm text-red-700">
+                <div className="border-b border-zinc-200 bg-red-50 px-4 py-3 text-sm text-red-700 sm:px-6">
                   {error}
                 </div>
               ) : null}
@@ -223,11 +223,14 @@ export function ApplicationWizard({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6"
+          className="fixed inset-0 z-50 grid place-items-end bg-black/40 p-0 sm:place-items-center sm:p-6"
           onClick={() => setSubmitModal((s) => ({ ...s, open: false }))}
         >
           <div
-            className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl"
+            className="w-full max-w-md rounded-t-2xl border border-zinc-200 border-b-0 bg-white p-5 shadow-xl sm:rounded-xl sm:border-b sm:p-6"
+            style={{
+              paddingBottom: "max(1.25rem, env(safe-area-inset-bottom, 0px))",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -286,7 +289,7 @@ export function ApplicationWizard({
               <button
                 type="button"
                 onClick={() => setSubmitModal((s) => ({ ...s, open: false }))}
-                className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                className="inline-flex min-h-11 min-w-[6rem] items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 active:scale-[0.99]"
               >
                 Close
               </button>
@@ -324,7 +327,7 @@ function PrimaryInfoStep({
 
   return (
     <form
-      className="space-y-6 p-6"
+      className="space-y-6 p-4 sm:p-6"
       onSubmit={async (e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -446,12 +449,12 @@ function PrimaryInfoStep({
         error={fieldErrors.profilePic}
       />
 
-      <label className="flex items-start gap-2 text-xs text-zinc-500">
+      <label className="flex min-h-11 cursor-pointer items-start gap-3 text-xs leading-relaxed text-zinc-500 sm:text-sm">
         <input
           type="checkbox"
           checked={accepted}
           onChange={(e) => setAccepted(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-600/20"
+          className="mt-0.5 h-5 w-5 shrink-0 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-600/20"
         />
         <span>
           Tap to accept our{" "}
@@ -471,7 +474,7 @@ function PrimaryInfoStep({
       <button
         type="submit"
         disabled={!accepted || saving}
-        className="inline-flex h-11 w-full items-center justify-center rounded-md bg-emerald-600 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-emerald-600 text-base font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm active:scale-[0.99]"
       >
         {saving ? "Saving..." : "Save Details and Continue"}
       </button>
@@ -547,7 +550,7 @@ function BankWalletStep({
 
   return (
     <form
-      className="space-y-5 p-6"
+      className="space-y-5 p-4 sm:p-6"
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
@@ -608,7 +611,7 @@ function BankWalletStep({
             <p className="text-xs font-semibold text-zinc-600">
               Choose your Wallet
             </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
               {walletOptions.map((name) => (
                 <WalletOption
                   key={name}
@@ -632,7 +635,7 @@ function BankWalletStep({
       <button
         type="submit"
         disabled={saving}
-        className="inline-flex h-11 w-full items-center justify-center rounded-md bg-emerald-600 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-emerald-600 text-base font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm active:scale-[0.99]"
       >
         {saving ? "Saving..." : "Save Details and Continue"}
       </button>
@@ -660,7 +663,7 @@ function BrandRelationStep({
 
   return (
     <form
-      className="space-y-5 p-6"
+      className="space-y-5 p-4 sm:p-6"
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
@@ -696,24 +699,24 @@ function BrandRelationStep({
         <p className="text-xs font-semibold text-zinc-600">
           Have you made any previous transaction ?
         </p>
-        <div className="flex items-center gap-6">
-          <label className="flex items-center gap-2 text-sm text-zinc-600">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-zinc-600">
             <input
               type="radio"
               name="previousTransaction"
               checked={hadPreviousTransaction === "yes"}
               onChange={() => setHadPreviousTransaction("yes")}
-              className="h-4 w-4 accent-emerald-600"
+              className="h-5 w-5 accent-emerald-600"
             />
             Yes
           </label>
-          <label className="flex items-center gap-2 text-sm text-zinc-600">
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-zinc-600">
             <input
               type="radio"
               name="previousTransaction"
               checked={hadPreviousTransaction === "no"}
               onChange={() => setHadPreviousTransaction("no")}
-              className="h-4 w-4 accent-emerald-600"
+              className="h-5 w-5 accent-emerald-600"
             />
             No
           </label>
@@ -730,7 +733,7 @@ function BrandRelationStep({
       <button
         type="submit"
         disabled={saving}
-        className="inline-flex h-11 w-full items-center justify-center rounded-md bg-emerald-600 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-emerald-600 text-base font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm active:scale-[0.99]"
       >
         {saving ? "Saving..." : "Save Details and Continue"}
       </button>
@@ -754,7 +757,7 @@ function PlatformDetailsStep({
 }) {
   return (
     <form
-      className="space-y-5 p-6"
+      className="space-y-5 p-4 sm:p-6"
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
@@ -797,7 +800,7 @@ function PlatformDetailsStep({
       <button
         type="submit"
         disabled={saving}
-        className="inline-flex h-11 w-full items-center justify-center rounded-md bg-emerald-600 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-emerald-600 text-base font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm active:scale-[0.99]"
       >
         {saving ? "Saving..." : "Save Details and Continue"}
       </button>
@@ -819,7 +822,7 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={[
-        "inline-flex h-11 items-center justify-center rounded-md border px-4 text-sm font-semibold transition-colors",
+        "inline-flex min-h-12 w-full items-center justify-center rounded-md border px-3 text-sm font-semibold transition-colors sm:px-4",
         active
           ? "border-emerald-900 bg-emerald-950 text-white"
           : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50",
@@ -846,7 +849,7 @@ function WalletOption({
       type="button"
       onClick={onSelect}
       className={[
-        "flex h-11 items-center justify-center gap-2 rounded-md border bg-white px-3 text-xs font-medium transition-colors",
+        "flex min-h-[2.75rem] items-center justify-center gap-1.5 rounded-md border bg-white px-2 text-[11px] font-medium leading-tight transition-colors sm:gap-2 sm:px-3 sm:text-xs",
         selected
           ? "border-emerald-600 ring-2 ring-emerald-600/15"
           : "border-zinc-200 hover:bg-zinc-50",
@@ -925,7 +928,7 @@ function Field({
         name={name}
         placeholder={placeholder}
         className={[
-          "h-10 w-full rounded-md bg-zinc-100/60 px-3 text-sm text-zinc-900 outline-none ring-1 ring-inset focus:bg-white",
+          "min-h-12 w-full rounded-md bg-zinc-100/60 px-3 py-2.5 text-base text-zinc-900 outline-none ring-1 ring-inset focus:bg-white sm:text-sm",
           error
             ? "ring-red-300 focus:ring-red-500/30"
             : "ring-zinc-200 focus:ring-emerald-600/20",
@@ -954,7 +957,7 @@ function SelectField({
         <select
           name={name}
           className={[
-            "h-10 w-full appearance-none rounded-md bg-zinc-100/60 px-3 pr-10 text-sm text-zinc-500 outline-none ring-1 ring-inset focus:bg-white",
+            "min-h-12 w-full appearance-none rounded-md bg-zinc-100/60 px-3 py-2 pr-10 text-base text-zinc-500 outline-none ring-1 ring-inset focus:bg-white sm:text-sm",
             error
               ? "ring-red-300 focus:ring-red-500/30"
               : "ring-zinc-200 focus:ring-emerald-600/20",
@@ -1000,7 +1003,7 @@ function SelectInput({
       <div className="relative">
         <select
           name={name}
-          className="h-10 w-full appearance-none rounded-md bg-zinc-100/60 px-3 pr-10 text-sm text-zinc-500 outline-none ring-1 ring-inset ring-zinc-200 focus:bg-white focus:ring-emerald-600/20"
+          className="min-h-12 w-full appearance-none rounded-md bg-zinc-100/60 px-3 py-2 pr-10 text-base text-zinc-500 outline-none ring-1 ring-inset ring-zinc-200 focus:bg-white focus:ring-emerald-600/20 sm:text-sm"
         >
           <option value="">{placeholder}</option>
           {options.map((opt) => (
@@ -1040,7 +1043,7 @@ function PhoneField({
       <label className="text-xs font-semibold text-zinc-600">{label}</label>
       <div
         className={[
-          "flex h-10 overflow-hidden rounded-md bg-zinc-100/60 ring-1 ring-inset focus-within:bg-white",
+          "flex min-h-12 overflow-hidden rounded-md bg-zinc-100/60 ring-1 ring-inset focus-within:bg-white",
           error
             ? "ring-red-300 focus-within:ring-red-500/30"
             : "ring-zinc-200 focus-within:ring-emerald-600/20",
@@ -1051,7 +1054,7 @@ function PhoneField({
             name={dialName}
             defaultValue={DEFAULT_PHONE_DIAL}
             aria-label={`${label} country code`}
-            className="h-10 min-w-[5.25rem] appearance-none bg-transparent py-0 pl-3 pr-7 text-sm text-zinc-700 outline-none"
+            className="min-h-12 min-w-[5.25rem] appearance-none bg-transparent py-2 pl-3 pr-7 text-base text-zinc-700 outline-none sm:text-sm"
           >
             {PHONE_DIAL_CODES.map((code) => (
               <option key={code} value={code}>
@@ -1075,7 +1078,7 @@ function PhoneField({
           inputMode="numeric"
           autoComplete="tel-national"
           placeholder="00000 - 00000"
-          className="min-w-0 flex-1 bg-transparent px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
+          className="min-h-12 min-w-0 flex-1 bg-transparent px-3 text-base text-zinc-900 outline-none placeholder:text-zinc-400 sm:text-sm"
         />
       </div>
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
@@ -1147,7 +1150,7 @@ function UploadCard({
           <button
             type="button"
             onClick={() => document.getElementById(inputId)?.click()}
-            className="inline-flex h-9 items-center justify-center rounded-md bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white hover:bg-emerald-700 active:scale-[0.99]"
           >
             {buttonLabel}
           </button>

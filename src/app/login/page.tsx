@@ -48,23 +48,32 @@ export default function LoginPage() {
           </div>
         </aside>
 
-        <main className="flex items-center justify-center px-6 py-10 lg:px-16">
+        <main className="app-shell-pad flex items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:px-16">
           <div className="w-full max-w-md">
-            <div className="mb-8 flex items-center gap-3">
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-500/15">
+            <div className="mb-6 flex items-center justify-between gap-3 lg:mb-8 lg:justify-start">
+              <div className="flex items-center gap-3">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-500/15">
+                  <Image
+                    src="/images/frame.png"
+                    alt=""
+                    width={28}
+                    height={28}
+                  />
+                </div>
                 <Image
-                  src="/images/frame.png"
-                  alt=""
-                  width={28}
-                  height={28}
+                  src="/images/play24x-logo.png"
+                  alt="Play24X"
+                  width={140}
+                  height={56}
+                  className="h-9 w-auto lg:hidden"
                 />
               </div>
             </div>
 
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
               Login to your Account
             </h1>
-            <p className="mt-2 text-sm leading-6 text-zinc-500">
+            <p className="mt-2 text-sm leading-relaxed text-zinc-500 sm:leading-6">
               Sign in with your registered mobile number.
             </p>
 
@@ -82,7 +91,7 @@ export default function LoginPage() {
             ) : null}
 
             <form
-              className="mt-8 space-y-5"
+              className="mt-6 space-y-5 sm:mt-8"
               onSubmit={async (e) => {
                 e.preventDefault();
                 try {
@@ -122,13 +131,13 @@ export default function LoginPage() {
                 >
                   Mobile Number
                 </label>
-                <div className="flex h-11 overflow-hidden rounded-md border border-zinc-200 bg-white focus-within:ring-2 focus-within:ring-emerald-600/20">
+                <div className="flex min-h-12 overflow-hidden rounded-md border border-zinc-200 bg-white focus-within:ring-2 focus-within:ring-emerald-600/20">
                   <div className="relative shrink-0 border-r border-zinc-200">
                     <select
                       value={dialCode}
                       onChange={(e) => setDialCode(e.target.value)}
                       aria-label="Mobile country code"
-                      className="h-11 min-w-[5.25rem] appearance-none bg-transparent py-0 pl-3 pr-7 text-sm text-zinc-700 outline-none"
+                      className="min-h-12 min-w-[5.25rem] appearance-none bg-transparent py-2 pl-3 pr-7 text-base text-zinc-700 outline-none"
                     >
                       {PHONE_DIAL_CODES.map((code) => (
                         <option key={code} value={code}>
@@ -153,7 +162,7 @@ export default function LoginPage() {
                     inputMode="numeric"
                     autoComplete="tel-national"
                     placeholder="00000 - 00000"
-                    className="min-w-0 flex-1 px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
+                    className="min-h-12 min-w-0 flex-1 px-3 text-base text-zinc-900 outline-none placeholder:text-zinc-400"
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
                   />
@@ -161,10 +170,10 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-zinc-600">
+                <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-zinc-600">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-600/20"
+                    className="h-5 w-5 shrink-0 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-600/20"
                   />
                   Remember me
                 </label>
@@ -173,22 +182,22 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={status === "loading"}
-                className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-md bg-emerald-800 text-sm font-semibold text-white transition-colors hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-md bg-emerald-800 text-base font-semibold text-white transition-colors hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm active:scale-[0.99]"
               >
                 {status === "loading" ? "Logging in..." : "Login"}
               </button>
             </form>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Link
                 href="/apply/wallet"
-                className="inline-flex h-11 items-center justify-center rounded-md border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/25"
+                className="inline-flex min-h-12 items-center justify-center rounded-md border border-emerald-200 bg-white px-4 text-center text-sm font-semibold leading-snug text-emerald-800 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/25 active:scale-[0.99]"
               >
                 Apply for Wallet agent
               </Link>
               <Link
                 href="/apply/referral"
-                className="inline-flex h-11 items-center justify-center rounded-md border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/25"
+                className="inline-flex min-h-12 items-center justify-center rounded-md border border-emerald-200 bg-white px-4 text-center text-sm font-semibold leading-snug text-emerald-800 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/25 active:scale-[0.99]"
               >
                 Apply for Referral agent
               </Link>
