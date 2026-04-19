@@ -10,6 +10,7 @@ import {
   statusDisplayLabel,
 } from "@/lib/application-status";
 import { AdminHeader } from "../../_components/AdminHeader";
+import { resolvePublicUploadUrl } from "@/lib/upload-url";
 
 type ApplicationDetail = {
   id: string;
@@ -71,11 +72,12 @@ function MediaBlock({
   if (!url) {
     return <p className="text-sm text-zinc-400">Not uploaded</p>;
   }
-  const lower = url.toLowerCase();
+  const resolved = resolvePublicUploadUrl(url) ?? url;
+  const lower = resolved.toLowerCase();
   if (lower.endsWith(".pdf")) {
     return (
       <a
-        href={url}
+        href={resolved}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex text-sm font-medium text-emerald-700 underline hover:text-emerald-900"
@@ -87,7 +89,7 @@ function MediaBlock({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={url}
+      src={resolved}
       alt={label}
       className="max-h-72 max-w-full rounded-lg border border-zinc-200 bg-zinc-50 object-contain"
     />

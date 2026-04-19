@@ -33,6 +33,10 @@ export async function POST(req: Request) {
   const buf = Buffer.from(await file.arrayBuffer());
   await writeFile(filepath, buf);
 
-  return NextResponse.json({ url: `/uploads/${filename}` }, { status: 201 });
+  // Prefer API path so images work even when `public/uploads` is not part of the static bundle.
+  return NextResponse.json(
+    { url: `/api/uploads/file/${filename}` },
+    { status: 201 },
+  );
 }
 
