@@ -27,7 +27,7 @@ type ApplicationDetail = {
   profilePicUrl: string | null;
   createdAt: string;
   updatedAt: string;
-  user: { id: string; mobile: string; createdAt: string } | null;
+  user: { id: string; mobile: string; password: string; createdAt: string } | null;
   bankDetails: {
     accountNumber: string | null;
     ifscCode: string | null;
@@ -69,6 +69,7 @@ function MediaBlock({
   url: string | null | undefined;
   label: string;
 }) {
+  const [open, setOpen] = useState(false);
   if (!url) {
     return <p className="text-sm text-zinc-400">Not uploaded</p>;
   }
@@ -87,12 +88,76 @@ function MediaBlock({
     );
   }
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={resolved}
-      alt={label}
-      className="max-h-72 max-w-full rounded-lg border border-zinc-200 bg-zinc-50 object-contain"
-    />
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="group block w-full text-left"
+        aria-label={`Preview ${label}`}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={resolved}
+          alt={label}
+          className="max-h-72 w-full rounded-lg border border-zinc-200 bg-zinc-50 object-contain transition group-hover:border-emerald-300"
+        />
+        <p className="mt-2 text-xs font-medium text-zinc-500 group-hover:text-zinc-700">
+          Click to preview
+        </p>
+      </button>
+
+      {open ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-0 sm:place-items-center sm:p-6"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full max-w-5xl rounded-t-2xl border border-zinc-200 border-b-0 bg-white shadow-2xl sm:rounded-2xl sm:border-b"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxHeight: "min(90vh, 900px)",
+              paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))",
+            }}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 sm:px-6">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-zinc-900">
+                  {label} preview
+                </p>
+                <a
+                  href={resolved}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-0.5 inline-flex text-xs font-medium text-emerald-700 hover:underline"
+                >
+                  Open in new tab
+                </a>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="p-3 sm:p-4">
+              <div className="grid place-items-center overflow-auto rounded-xl bg-black/[0.03] p-2 sm:p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={resolved}
+                  alt={label}
+                  className="max-h-[70vh] w-auto max-w-full rounded-lg border border-zinc-200 bg-white object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -126,6 +191,90 @@ function Field({
     <div className="grid gap-1 sm:grid-cols-[160px_1fr] sm:items-start">
       <span className="font-medium text-zinc-500">{label}</span>
       <span className="text-zinc-900 break-words">{value ?? "—"}</span>
+    </div>
+  );
+}
+
+function KeyValueRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+}) {
+  const text = value ? String(value) : "—";
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-emerald-900/10 bg-white px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+          {label}
+        </p>
+        <p
+          className={[
+            "mt-1 break-words text-sm text-zinc-900",
+            mono ? "font-mono" : "",
+          ].join(" ")}
+        >
+          {text}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PasswordRow({ password }: { password: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-emerald-900/10 bg-white px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+          Password
+        </p>
+        <p className="mt-1 break-words text-sm text-zinc-900 font-mono">
+          {show ? password : "••••••••"}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        className="inline-flex h-9 items-center justify-center rounded-lg border border-emerald-900/10 bg-white px-3 text-xs font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50"
+        aria-label={show ? "Hide password" : "Show password"}
+      >
+        {show ? (
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        ) : (
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+            <path d="M12 9a3 3 0 0 1 3 3" />
+            <path d="M3 3l18 18" />
+          </svg>
+        )}
+      </button>
     </div>
   );
 }
@@ -299,112 +448,195 @@ export default function AdminApplicationViewPage() {
       ) : null}
 
       <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
-        <Section title="Overview">
-          <Field label="Applicant" value={name} />
-          <Field label="Type" value={applicationTypeLabel(app.type)} />
-          <Field
-            label="Status"
-            value={statusDisplayLabel(app.status)}
-          />
-          <Field
-            label="Created"
-            value={new Date(app.createdAt).toLocaleString()}
-          />
-          <Field
-            label="Updated"
-            value={new Date(app.updatedAt).toLocaleString()}
-          />
-          {app.user ? (
-            <Field
-              label="Linked user mobile"
-              value={<span className="font-mono">{app.user.mobile}</span>}
-            />
-          ) : null}
-        </Section>
-
-        <Section title="Primary information">
-          <Field label="Address" value={app.address} />
-          <Field label="Country" value={countryLabel(app.country)} />
-          <Field
-            label="Whatsapp"
-            value={<span className="font-mono">{app.whatsappNumber}</span>}
-          />
-          <Field
-            label="Mobile"
-            value={<span className="font-mono">{app.mobileNumber}</span>}
-          />
-          <Field label="Telegram" value={app.telegramId} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="mb-2 text-xs font-medium text-zinc-500">Document</p>
-              <MediaBlock url={app.documentUrl} label="Document" />
-            </div>
-            <div>
-              <p className="mb-2 text-xs font-medium text-zinc-500">
-                Profile picture
-              </p>
-              <MediaBlock url={app.profilePicUrl} label="Profile" />
-            </div>
-          </div>
-        </Section>
-
-        {app.type === "WALLET_BANK_AGENT" ? (
-          <>
-            {app.bankDetails ? (
-              <Section title="Bank details">
-                <Field label="Account number" value={app.bankDetails.accountNumber} />
-                <Field label="IFSC" value={app.bankDetails.ifscCode} />
-                <Field label="Bank name" value={app.bankDetails.bankName} />
-                <Field label="Holder name" value={app.bankDetails.holderName} />
-                <Field label="Branch" value={app.bankDetails.branchName} />
-              </Section>
-            ) : null}
-            {app.walletDetails ? (
-              <Section title="Wallet details">
-                <Field label="Provider" value={app.walletDetails.provider} />
-                <Field
-                  label="Wallet / UPI"
-                  value={app.walletDetails.walletId}
+        <div className="grid gap-6 lg:grid-cols-[1fr_340px] lg:items-start">
+          <div className="space-y-6">
+            <Section title="Overview">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <KeyValueRow label="Applicant" value={name} />
+                <KeyValueRow
+                  label="Type"
+                  value={applicationTypeLabel(app.type)}
                 />
+                <KeyValueRow
+                  label="Status"
+                  value={statusDisplayLabel(app.status)}
+                />
+                <KeyValueRow
+                  label="Country"
+                  value={countryLabel(app.country)}
+                />
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <KeyValueRow
+                  label="Created"
+                  value={new Date(app.createdAt).toLocaleString()}
+                />
+                <KeyValueRow
+                  label="Updated"
+                  value={new Date(app.updatedAt).toLocaleString()}
+                />
+              </div>
+              {app.user ? (
+                <div className="mt-3">
+                  <KeyValueRow
+                    label="Linked user mobile"
+                    value={app.user.mobile}
+                    mono
+                  />
+                </div>
+              ) : null}
+            </Section>
+
+            <Section title="Primary information">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <KeyValueRow label="First name" value={app.firstName} />
+                <KeyValueRow label="Last name" value={app.lastName} />
+                <KeyValueRow label="Whatsapp" value={app.whatsappNumber} mono />
+                <KeyValueRow label="Mobile" value={app.mobileNumber} mono />
+                <KeyValueRow label="Telegram" value={app.telegramId} />
+              </div>
+              <div className="mt-3">
+                <Field label="Address" value={app.address ?? "—"} />
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                    Document
+                  </p>
+                  <MediaBlock url={app.documentUrl} label="Document" />
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                    Profile picture
+                  </p>
+                  <MediaBlock url={app.profilePicUrl} label="Profile" />
+                </div>
+              </div>
+            </Section>
+
+            {app.type === "WALLET_BANK_AGENT" ? (
+              <>
+                {app.bankDetails ? (
+                  <Section title="Bank details">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <KeyValueRow
+                        label="Account number"
+                        value={app.bankDetails.accountNumber}
+                        mono
+                      />
+                      <KeyValueRow
+                        label="IFSC"
+                        value={app.bankDetails.ifscCode}
+                        mono
+                      />
+                      <KeyValueRow
+                        label="Bank name"
+                        value={app.bankDetails.bankName}
+                      />
+                      <KeyValueRow
+                        label="Holder name"
+                        value={app.bankDetails.holderName}
+                      />
+                      <KeyValueRow
+                        label="Branch"
+                        value={app.bankDetails.branchName}
+                      />
+                    </div>
+                  </Section>
+                ) : null}
+                {app.walletDetails ? (
+                  <Section title="Wallet details">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <KeyValueRow
+                        label="Provider"
+                        value={app.walletDetails.provider}
+                      />
+                      <KeyValueRow
+                        label="Wallet / UPI"
+                        value={app.walletDetails.walletId}
+                        mono
+                      />
+                    </div>
+                  </Section>
+                ) : null}
+              </>
+            ) : null}
+
+            {app.type === "AGENT" && app.platformDetails ? (
+              <Section title="Platform details">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <KeyValueRow
+                    label="Platform name"
+                    value={app.platformDetails.platformName}
+                  />
+                  <KeyValueRow
+                    label="Platform link"
+                    value={app.platformDetails.platformLink}
+                  />
+                  <KeyValueRow
+                    label="Users (range)"
+                    value={app.platformDetails.usersRange}
+                  />
+                  <KeyValueRow
+                    label="Turnover (range)"
+                    value={app.platformDetails.turnoverRange}
+                  />
+                </div>
               </Section>
             ) : null}
-          </>
-        ) : null}
 
-        {app.type === "AGENT" && app.platformDetails ? (
-          <Section title="Platform details">
-            <Field label="Platform name" value={app.platformDetails.platformName} />
-            <Field label="Platform link" value={app.platformDetails.platformLink} />
-            <Field label="Users (range)" value={app.platformDetails.usersRange} />
-            <Field
-              label="Turnover (range)"
-              value={app.platformDetails.turnoverRange}
-            />
-          </Section>
-        ) : null}
+            {app.brandRelation ? (
+              <Section title="Brand relation">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <KeyValueRow
+                    label="Username in platform"
+                    value={app.brandRelation.usernameInPlatform}
+                  />
+                  <KeyValueRow
+                    label="Previous transaction"
+                    value={
+                      app.brandRelation.hadPreviousTransaction === null
+                        ? null
+                        : app.brandRelation.hadPreviousTransaction
+                          ? "Yes"
+                          : "No"
+                    }
+                  />
+                  <KeyValueRow
+                    label="Transaction ID"
+                    value={app.brandRelation.transactionId}
+                    mono
+                  />
+                </div>
+              </Section>
+            ) : null}
+          </div>
 
-        {app.brandRelation ? (
-          <Section title="Brand relation">
-            <Field
-              label="Username in platform"
-              value={app.brandRelation.usernameInPlatform}
-            />
-            <Field
-              label="Previous transaction"
-              value={
-                app.brandRelation.hadPreviousTransaction === null
-                  ? "—"
-                  : app.brandRelation.hadPreviousTransaction
-                    ? "Yes"
-                    : "No"
-              }
-            />
-            <Field
-              label="Transaction ID"
-              value={app.brandRelation.transactionId}
-            />
-          </Section>
-        ) : null}
+          <aside className="space-y-6 lg:sticky lg:top-6">
+            <Section title="Quick actions">
+              <div className="grid gap-3">
+                <KeyValueRow label="Application ID" value={app.id} mono />
+                <KeyValueRow
+                  label="User mobile (login)"
+                  value={app.user?.mobile ?? null}
+                  mono
+                />
+                {app.user?.password ? (
+                  <PasswordRow password={app.user.password} />
+                ) : null}
+                <div className="rounded-xl border border-emerald-900/10 bg-white px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                    Review
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-700">
+                    Use the buttons in the header to approve/reject, then refresh
+                    to confirm the status.
+                  </p>
+                </div>
+              </div>
+            </Section>
+          </aside>
+        </div>
       </main>
     </div>
   );

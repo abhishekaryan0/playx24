@@ -10,6 +10,25 @@ import {
 import { ApplicationHeader } from "./ApplicationHeader";
 import { StepsSidebar, type WizardStep } from "./StepsSidebar";
 
+type PatchApplicationResponse = {
+  id?: string;
+  credentials?: { mobile?: string; password?: string };
+};
+
+function getErrorMessage(e: unknown): string {
+  if (e && typeof e === "object" && "message" in e && typeof e.message === "string") {
+    return e.message;
+  }
+  return "Failed to save";
+}
+
+function getFieldErrors(e: unknown): Record<string, string> | undefined {
+  if (!e || typeof e !== "object" || !("fieldErrors" in e)) return undefined;
+  const fe = (e as { fieldErrors?: unknown }).fieldErrors;
+  if (!fe || typeof fe !== "object") return undefined;
+  return fe as Record<string, string>;
+}
+
 export function ApplicationWizard({
   headerHighlightText,
   headerSuffixText,
@@ -29,6 +48,8 @@ export function ApplicationWizard({
     open: boolean;
     kind: "success" | "error";
     message: string;
+    mobile?: string;
+    password?: string;
   }>({ open: false, kind: "success", message: "" });
 
   const step2PanelTitle =
@@ -76,7 +97,7 @@ export function ApplicationWizard({
         fieldErrors: data?.fieldErrors,
       });
     }
-    return (await res.json().catch(() => ({}))) as any;
+    return (await res.json().catch(() => ({}))) as PatchApplicationResponse;
   }
 
   return (
@@ -136,14 +157,12 @@ export function ApplicationWizard({
                       setSaving(true);
                       await patchApplication({ primaryInfo: values });
                       setStep(2);
-                    } catch (e: any) {
-                      const fe = e?.fieldErrors as
-                        | Record<string, string>
-                        | undefined;
+                    } catch (e: unknown) {
+                      const fe = getFieldErrors(e);
                       if (fe && Object.keys(fe).length) {
                         setError(Object.values(fe).join(", "));
                       } else {
-                        setError(e?.message ?? "Failed to save");
+                        setError(getErrorMessage(e));
                       }
                     } finally {
                       setSaving(false);
@@ -160,8 +179,8 @@ export function ApplicationWizard({
                         setSaving(true);
                         await patchApplication({ platformDetails: values });
                         setStep(3);
-                      } catch (e: any) {
-                        setError(e?.message ?? "Failed to save");
+                      } catch (e: unknown) {
+                        setError(getErrorMessage(e));
                       } finally {
                         setSaving(false);
                       }
@@ -176,8 +195,8 @@ export function ApplicationWizard({
                         setSaving(true);
                         await patchApplication(values);
                         setStep(3);
-                      } catch (e: any) {
-                        setError(e?.message ?? "Failed to save");
+                      } catch (e: unknown) {
+                        setError(getErrorMessage(e));
                       } finally {
                         setSaving(false);
                       }
@@ -191,17 +210,25 @@ export function ApplicationWizard({
                     try {
                       setError(null);
                       setSaving(true);
-                      await patchApplication({
+                      const result = await patchApplication({
                         brandRelation: values,
                         status: "PENDING",
                       });
+
+                      // Once submitted, drop the local draft so the next application starts fresh.
+                      window.localStorage.removeItem(storageKey);
+                      setApplicationId(null);
+
                       setSubmitModal({
                         open: true,
                         kind: "success",
-                        message: "Your application has been submitted successfully.",
+                        message:
+                          "Your application has been submitted successfully. Please note this.",
+                        mobile: result.credentials?.mobile,
+                        password: result.credentials?.password,
                       });
-                    } catch (e: any) {
-                      const msg = e?.message ?? "Submission failed";
+                    } catch (e: unknown) {
+                      const msg = getErrorMessage(e) || "Submission failed";
                       setError(msg);
                       setSubmitModal({
                         open: true,
@@ -282,6 +309,26 @@ export function ApplicationWizard({
                 <p className="mt-1 text-sm text-zinc-600">
                   {submitModal.message}
                 </p>
+
+                {submitModal.kind === "success" &&
+                submitModal.mobile &&
+                submitModal.password ? (
+                  <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <p className="text-xs font-semibold text-emerald-800">
+                      Login details
+                    </p>
+                    <div className="mt-2 space-y-1 text-sm text-emerald-900">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-emerald-800/80">Mobile</span>
+                        <span className="font-mono">{submitModal.mobile}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-emerald-800/80">Password</span>
+                        <span className="font-mono">{submitModal.password}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 

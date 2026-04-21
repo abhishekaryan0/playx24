@@ -119,8 +119,14 @@ export default function LoginPage() {
                     return;
                   }
 
+                  // Persist login identifier for viewing application status.
+                  window.localStorage.setItem("play24x:auth:mobile", mobileFull);
+
                   setStatus("success");
                   setMessage("Login successful");
+
+                  // Redirect to application status page.
+                  window.location.href = "/my-application";
                 } catch {
                   setStatus("error");
                   setMessage("Login failed");

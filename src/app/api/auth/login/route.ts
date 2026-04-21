@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeMobile } from "@/lib/mobile";
 
 export const runtime = "nodejs";
 
@@ -8,9 +9,14 @@ export async function POST(req: Request) {
     | { mobile?: string; password?: string }
     | null;
 
-  const mobile = body?.mobile?.trim();
+  const mobileRaw = body?.mobile?.trim();
   const password = body?.password ?? "";
 
+  if (!mobileRaw) {
+    return NextResponse.json({ error: "Missing mobile" }, { status: 400 });
+  }
+
+  const mobile = normalizeMobile(mobileRaw);
   if (!mobile) {
     return NextResponse.json({ error: "Missing mobile" }, { status: 400 });
   }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
@@ -40,6 +41,18 @@ type ApplicationPatch = {
   };
 };
 
+function generateEasyPassword(): string {
+  // Easy to remember + type (requested). Example: P24-48231
+  const digits = Math.floor(Math.random() * 100000)
+    .toString()
+    .padStart(5, "0");
+  return `P24-${digits}`;
+}
+
+function normalizeMobile(value: string): string {
+  return value.replace(/\s+/g, "").replace(/^\+/, "");
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -50,7 +63,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const data: any = {};
+  const isSubmitting = body.status === "PENDING";
+  const data: Prisma.ApplicationUpdateInput = {};
 
   if (body.status !== undefined) data.status = body.status;
   if (body.primaryInfo) {
@@ -86,10 +100,6 @@ export async function PATCH(
     Object.assign(data, body.primaryInfo);
 
     // Ensure a User exists for this mobile and link application -> user.
-    // Password auth disabled for applicants for now (empty password; login is mobile-only).
-    const normalizeMobile = (value: string) =>
-      value.replace(/\s+/g, "").replace(/^\+/, "");
-
     const mobile = normalizeMobile(mobileNumber);
 
     const existing = await prisma.user.findUnique({
@@ -102,9 +112,9 @@ export async function PATCH(
         data: { mobile, password: "" },
         select: { id: true },
       });
-      data.userId = created.id;
+      data.user = { connect: { id: created.id } };
     } else {
-      data.userId = existing.id;
+      data.user = { connect: { id: existing.id } };
     }
   }
 
@@ -168,13 +178,62 @@ export async function PATCH(
   }
 
   try {
+    // If this is the final submission, generate a password and return it once
+    // so the user can log in with (mobile + password).
+    if (isSubmitting) {
+      const result = await prisma.$transaction(async (tx) => {
+        const application = await tx.application.findUnique({
+          where: { id },
+          select: { id: true, userId: true, user: { select: { mobile: true } } },
+        });
+
+        if (!application) {
+          return { kind: "error" as const, status: 404, payload: { error: "Not found" } };
+        }
+        if (!application.userId || !application.user?.mobile) {
+          return {
+            kind: "error" as const,
+            status: 400,
+            payload: { error: "Missing mobile number. Please complete Step 1." },
+          };
+        }
+
+        const password = generateEasyPassword();
+        await tx.user.update({
+          where: { id: application.userId },
+          data: { password },
+          select: { id: true },
+        });
+
+        const updated = await tx.application.update({
+          where: { id },
+          data,
+          select: { id: true },
+        });
+
+        return {
+          kind: "success" as const,
+          status: 200,
+          payload: {
+            ...updated,
+            credentials: { mobile: application.user.mobile, password },
+          },
+        };
+      });
+
+      if (result.kind === "error") {
+        return NextResponse.json(result.payload, { status: result.status });
+      }
+      return NextResponse.json(result.payload, { status: result.status });
+    }
+
     const updated = await prisma.application.update({
       where: { id },
       data,
       select: { id: true },
     });
     return NextResponse.json(updated);
-  } catch (e: any) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to update application" },
       { status: 500 },

@@ -27,7 +27,7 @@ export async function GET(
   const application = await prisma.application.findUnique({
     where: { id },
     include: {
-      user: { select: { id: true, mobile: true, createdAt: true } },
+      user: { select: { id: true, mobile: true, password: true, createdAt: true } },
       bankDetails: true,
       walletDetails: true,
       platformDetails: true,
