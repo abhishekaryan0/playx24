@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     if (!bankName) fieldErrors.bankName = "Bank name is required";
   }
   if (!transactionNo) fieldErrors.transactionNo = "Transaction number is required";
-  if (!screenshotUrl) fieldErrors.screenshotUrl = "Screenshot is required";
+  // Screenshot is optional for now.
 
   if (Object.keys(fieldErrors).length) {
     return NextResponse.json(
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
       walletProvider: walletProvider || null,
       walletId: walletId || null,
       transactionNo,
-      screenshotUrl,
+      screenshotUrl: screenshotUrl || null,
     },
     select: { id: true, status: true, createdAt: true },
   });
