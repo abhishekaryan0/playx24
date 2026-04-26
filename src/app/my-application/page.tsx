@@ -981,7 +981,7 @@ export default function MyApplicationPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-100">
-                        {filteredTx.map((t) => (
+                        {statementRows.map((t) => (
                             <tr key={t.id} className="hover:bg-emerald-50/40">
                               <td className="px-5 py-4 text-xs text-zinc-700">
                                 {new Date(t.createdAt).toLocaleString()}
@@ -1005,7 +1005,7 @@ export default function MyApplicationPage() {
                               </td>
                             </tr>
                           ))}
-                        {filteredTx.length === 0 ? (
+                        {statementRows.length === 0 ? (
                           <tr>
                             <td
                               colSpan={6}
