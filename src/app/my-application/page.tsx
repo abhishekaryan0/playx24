@@ -252,6 +252,9 @@ export default function MyApplicationPage() {
     "depositRequest" | "payRecord" | "statement" | "profile"
   >("profile");
 
+  const [statementQuery, setStatementQuery] = useState("");
+  const [statementDate, setStatementDate] = useState("");
+
   useEffect(() => {
     const m = window.localStorage.getItem(storageKey) ?? "";
     setMobile(m);
@@ -339,7 +342,7 @@ export default function MyApplicationPage() {
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-emerald-50/35 via-white to-zinc-50/90 pb-16">
       <AdminHeader
-        maxWidth="4xl"
+        maxWidth="6xl"
         title="Applications"
         description="Full submission including documents and linked account."
         back={{ href: "/", label: "Back to login" }}
@@ -348,26 +351,16 @@ export default function MyApplicationPage() {
             <div className="flex flex-wrap items-center justify-end gap-2">
               <span className="font-mono text-xs text-zinc-500">{mobile}</span>
               {appStatus ? <StatusPill status={appStatus} /> : null}
-              <button
-                type="button"
-                onClick={() => {
-                  setDepositMessage(null);
-                  setDepositErrors({});
-                  setDepositOpen(true);
-                }}
-                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:scale-[0.99]"
-              >
-                Submit deposit
-              </button>
             </div>
           ) : null
         }
       />
 
-      <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
         {mobile ? (
-          <div className="overflow-x-auto rounded-2xl border border-emerald-900/10 bg-white shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
-            <div className="flex min-w-[560px] items-center gap-2 px-3 py-3 sm:px-4">
+          <div className="rounded-2xl border border-emerald-900/10 bg-white shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
+            <div className="flex flex-col gap-3 px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
               <DashTab
                 active={tab === "depositRequest"}
                 onClick={() => setTab("depositRequest")}
@@ -461,6 +454,19 @@ export default function MyApplicationPage() {
               >
                 Profile
               </DashTab>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDepositMessage(null);
+                  setDepositErrors({});
+                  setDepositOpen(true);
+                }}
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:scale-[0.99] lg:self-auto"
+              >
+                Submit Deposit
+              </button>
             </div>
           </div>
         ) : null}
@@ -601,9 +607,263 @@ export default function MyApplicationPage() {
             ) : null}
 
             {tab === "statement" ? (
-              <Section title="Statement">
-                <p className="text-sm text-zinc-600">Coming soon.</p>
-              </Section>
+              <div className="space-y-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="grid gap-3 sm:grid-cols-4">
+                    <StatCard
+                      title="Commission"
+                      value="$ 0"
+                      tone="amber"
+                      icon={
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 7v10" />
+                          <path d="M8.5 10.5h7" />
+                        </svg>
+                      }
+                    />
+                    <StatCard
+                      title="Total IN"
+                      value={`${tx.length}`}
+                      tone="emerald"
+                      icon={
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      }
+                    />
+                    <StatCard
+                      title="Total OUT"
+                      value="0"
+                      tone="rose"
+                      icon={
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M8 12h8" />
+                        </svg>
+                      }
+                    />
+                    <StatCard
+                      title="Balance"
+                      value="$ 0"
+                      tone="sky"
+                      icon={
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M12 2v20" />
+                          <path d="M17 7H9.5a3.5 3.5 0 0 0 0 7H14a3 3 0 0 1 0 6H6" />
+                        </svg>
+                      }
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDepositMessage(null);
+                      setDepositErrors({});
+                      setDepositOpen(true);
+                    }}
+                    className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:scale-[0.99]"
+                  >
+                    Submit Deposit
+                  </button>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-900/10 bg-white p-3 shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03] sm:p-4">
+                  <div className="grid gap-2 sm:grid-cols-[auto_1fr_auto_auto] sm:items-center">
+                    <button
+                      type="button"
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M4 21v-7" />
+                        <path d="M4 10V3" />
+                        <path d="M12 21v-9" />
+                        <path d="M12 8V3" />
+                        <path d="M20 21v-5" />
+                        <path d="M20 12V3" />
+                        <path d="M1 14h6" />
+                        <path d="M9 8h6" />
+                        <path d="M17 16h6" />
+                      </svg>
+                      Filter by
+                    </button>
+
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <circle cx="11" cy="11" r="8" />
+                          <path d="m21 21-4.3-4.3" />
+                        </svg>
+                      </span>
+                      <input
+                        value={statementQuery}
+                        onChange={(e) => setStatementQuery(e.target.value)}
+                        placeholder="Search by transaction ID"
+                        className="min-h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20"
+                      />
+                    </div>
+
+                    <div className="relative">
+                      <select
+                        value={statementDate}
+                        onChange={(e) => setStatementDate(e.target.value)}
+                        className="min-h-10 w-full appearance-none rounded-lg border border-zinc-200 bg-white px-3 pr-10 text-sm text-zinc-700 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20"
+                      >
+                        <option value="">Select Date</option>
+                        <option value="today">Today</option>
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                      </select>
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M5.5 7.5l4.5 5 4.5-5H5.5z" />
+                        </svg>
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <path d="M7 10l5 5 5-5" />
+                        <path d="M12 15V3" />
+                      </svg>
+                      Download Statement
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-emerald-900/10 bg-white shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[980px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-emerald-900/10 bg-[#1b4332]/[0.06] text-xs font-semibold uppercase tracking-wide text-[#1b4332]">
+                          <th className="px-5 py-4">Date + time</th>
+                          <th className="px-5 py-4">Wallet details</th>
+                          <th className="px-5 py-4">Transaction ID</th>
+                          <th className="px-5 py-4 text-right">Withdrawal</th>
+                          <th className="px-5 py-4 text-right">Deposits</th>
+                          <th className="px-5 py-4 text-right">Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {tx
+                          .filter((t) => {
+                            const q = statementQuery.trim().toLowerCase();
+                            if (!q) return true;
+                            return (t.transactionNo ?? "").toLowerCase().includes(q);
+                          })
+                          .map((t) => (
+                            <tr key={t.id} className="hover:bg-emerald-50/40">
+                              <td className="px-5 py-4 text-xs text-zinc-700">
+                                {new Date(t.createdAt).toLocaleString()}
+                              </td>
+                              <td className="px-5 py-4 text-xs text-zinc-700">
+                                {(t.walletProvider || t.method || "—") +
+                                  (t.walletId ? ` - ${t.walletId}` : "")}
+                              </td>
+                              <td className="px-5 py-4 font-mono text-xs text-zinc-800">
+                                {t.transactionNo ?? "—"}
+                              </td>
+                              <td className="px-5 py-4 text-right text-xs text-zinc-700">
+                                —
+                              </td>
+                              <td className="px-5 py-4 text-right text-xs text-zinc-700">
+                                —
+                              </td>
+                              <td className="px-5 py-4 text-right text-xs text-zinc-700">
+                                —
+                              </td>
+                            </tr>
+                          ))}
+                        {tx.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={6}
+                              className="px-5 py-14 text-center text-zinc-500"
+                            >
+                              No statement entries yet.
+                            </td>
+                          </tr>
+                        ) : null}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             ) : null}
 
             {tab === "profile" ? (
@@ -1177,6 +1437,44 @@ function FinanceRow({
         placeholder={placeholder}
         className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none placeholder:text-zinc-300 disabled:cursor-not-allowed"
       />
+    </div>
+  );
+}
+
+function StatCard({
+  title,
+  value,
+  tone,
+  icon,
+}: {
+  title: string;
+  value: string;
+  tone: "amber" | "emerald" | "rose" | "sky";
+  icon: React.ReactNode;
+}) {
+  const toneCls =
+    tone === "amber"
+      ? "text-amber-700 bg-amber-50 ring-amber-200/70"
+      : tone === "emerald"
+        ? "text-emerald-700 bg-emerald-50 ring-emerald-200/70"
+        : tone === "rose"
+          ? "text-rose-700 bg-rose-50 ring-rose-200/70"
+          : "text-sky-700 bg-sky-50 ring-sky-200/70";
+  return (
+    <div className="rounded-2xl border border-emerald-900/10 bg-white p-4 shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+            {title}
+          </p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">
+            {value}
+          </p>
+        </div>
+        <div className={`grid h-9 w-9 place-items-center rounded-xl ring-1 ${toneCls}`}>
+          {icon}
+        </div>
+      </div>
     </div>
   );
 }
