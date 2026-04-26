@@ -22,6 +22,14 @@ type ApplicationRow = {
   user: { mobile: string } | null;
 };
 
+type ListResponse = {
+  applications: ApplicationRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
 export default function AdminPage() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [authed, setAuthed] = useState(false);
@@ -35,11 +43,38 @@ export default function AdminPage() {
   const [listError, setListError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
 
+  const [statusFilter, setStatusFilter] = useState<
+    "ALL" | "APPROVED" | "REJECTED" | "PENDING" | "DRAFT"
+  >("ALL");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "AGENT" | "WALLET_BANK_AGENT">(
+    "ALL",
+  );
+  const [q, setQ] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const showingFrom = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const showingTo = Math.min(total, page * pageSize);
+
   const loadApplications = useCallback(async () => {
     setListLoading(true);
     setListError(null);
     try {
-      const res = await fetch("/api/admin/applications");
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
+      if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (typeFilter !== "ALL") params.set("type", typeFilter);
+      if (q.trim()) params.set("q", q.trim());
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+
+      const res = await fetch(`/api/admin/applications?${params.toString()}`);
       if (res.status === 401) {
         setAuthed(false);
         setRows([]);
@@ -49,14 +84,24 @@ export default function AdminPage() {
         setListError("Failed to load applications");
         return;
       }
-      const data = (await res.json()) as { applications: ApplicationRow[] };
+      const data = (await res.json()) as ListResponse;
       setRows(data.applications ?? []);
+      setPage(data.page ?? 1);
+      setPageSize(data.pageSize ?? pageSize);
+      setTotal(data.total ?? 0);
+      setTotalPages(data.totalPages ?? 1);
     } catch {
       setListError("Failed to load applications");
     } finally {
       setListLoading(false);
     }
-  }, []);
+  }, [from, page, pageSize, q, statusFilter, to, typeFilter]);
+
+  useEffect(() => {
+    if (!authed) return;
+    loadApplications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, page, pageSize, statusFilter, typeFilter, from, to, q]);
 
   useEffect(() => {
     (async () => {
@@ -262,6 +307,158 @@ export default function AdminPage() {
       />
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="mb-5 rounded-2xl border border-emerald-900/10 bg-white p-4 shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusTab
+                active={statusFilter === "APPROVED"}
+                onClick={() => {
+                  setStatusFilter("APPROVED");
+                  setPage(1);
+                }}
+              >
+                Approved
+              </StatusTab>
+              <StatusTab
+                active={statusFilter === "REJECTED"}
+                onClick={() => {
+                  setStatusFilter("REJECTED");
+                  setPage(1);
+                }}
+              >
+                Rejected
+              </StatusTab>
+              <StatusTab
+                active={statusFilter === "PENDING"}
+                onClick={() => {
+                  setStatusFilter("PENDING");
+                  setPage(1);
+                }}
+              >
+                Pending
+              </StatusTab>
+              <StatusTab
+                active={statusFilter === "DRAFT"}
+                onClick={() => {
+                  setStatusFilter("DRAFT");
+                  setPage(1);
+                }}
+              >
+                Draft
+              </StatusTab>
+              <StatusTab
+                active={statusFilter === "ALL"}
+                onClick={() => {
+                  setStatusFilter("ALL");
+                  setPage(1);
+                }}
+              >
+                All
+              </StatusTab>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center lg:justify-end">
+              <div className="relative">
+                <input
+                  value={q}
+                  onChange={(e) => {
+                    setQ(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="Search name / mobile / telegram…"
+                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20 lg:w-[260px]"
+                />
+              </div>
+
+              <select
+                value={typeFilter}
+                onChange={(e) => {
+                  setTypeFilter(e.target.value as any);
+                  setPage(1);
+                }}
+                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20"
+                aria-label="Select agent type"
+              >
+                <option value="ALL">Select Agent</option>
+                <option value="AGENT">Referral agent</option>
+                <option value="WALLET_BANK_AGENT">Wallet agent</option>
+              </select>
+
+              <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:col-auto lg:flex lg:items-center">
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={from}
+                    onChange={(e) => {
+                      setFrom(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20"
+                    aria-label="From date"
+                  />
+                </div>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={to}
+                    onChange={(e) => {
+                      setTo(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20"
+                    aria-label="To date"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-zinc-500">
+              Showing <span className="font-medium text-zinc-700">{showingFrom}</span>
+              {" - "}
+              <span className="font-medium text-zinc-700">{showingTo}</span> of{" "}
+              <span className="font-medium text-zinc-700">{total}</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="h-9 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-700 outline-none"
+                aria-label="Rows per page"
+              >
+                <option value={10}>10 / page</option>
+                <option value={20}>20 / page</option>
+                <option value={50}>50 / page</option>
+              </select>
+              <div className="inline-flex overflow-hidden rounded-lg border border-zinc-200 bg-white">
+                <button
+                  type="button"
+                  disabled={page <= 1 || listLoading}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="h-9 px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <div className="grid h-9 place-items-center border-x border-zinc-200 px-3 text-xs text-zinc-500">
+                  {page} / {totalPages}
+                </div>
+                <button
+                  type="button"
+                  disabled={page >= totalPages || listLoading}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="h-9 px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {listError ? (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-800 shadow-sm">
             {listError}
@@ -373,6 +570,31 @@ export default function AdminPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+function StatusTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "inline-flex h-9 items-center justify-center rounded-lg border px-3 text-xs font-semibold transition",
+        active
+          ? "border-emerald-200 bg-emerald-50 text-[#1b4332]"
+          : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50",
+      ].join(" ")}
+    >
+      {children}
+    </button>
   );
 }
 
