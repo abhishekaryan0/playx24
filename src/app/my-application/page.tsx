@@ -367,10 +367,25 @@ export default function MyApplicationPage() {
     });
   }, [statementDate, statementQuery, tx]);
 
+  const depositRequests = useMemo(
+    () => tx.filter((t) => t.type === "ADMIN_DEPOSIT"),
+    [tx],
+  );
+
+  const payRecords = useMemo(
+    () => tx.filter((t) => t.type === "USER_DEPOSIT"),
+    [tx],
+  );
+
+  const statementRows = useMemo(
+    () => filteredTx.filter((t) => t.status === "APPROVED"),
+    [filteredTx],
+  );
+
   const statementTotals = useMemo(() => {
     let totalIn = 0;
     let totalOut = 0;
-    for (const t of filteredTx) {
+    for (const t of statementRows) {
       const amt = typeof t.amount === "number" && Number.isFinite(t.amount) ? t.amount : 0;
       // For now we treat both ADMIN_DEPOSIT and USER_DEPOSIT as deposits (money coming in).
       // When you add withdrawals later, we’ll put them into Total OUT.
@@ -378,7 +393,22 @@ export default function MyApplicationPage() {
     }
     const balance = totalIn - totalOut;
     return { totalIn, totalOut, balance };
-  }, [filteredTx]);
+  }, [statementRows]);
+
+  async function respondToAdminDeposit(id: string, next: "APPROVED" | "DECLINED") {
+    try {
+      const res = await fetch(`/api/me/transactions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobile, status: next }),
+      });
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(json?.error || "Update failed");
+      await loadTransactions();
+    } catch (e: unknown) {
+      setTxError(isRecord(e) && typeof e.message === "string" ? e.message : "Update failed");
+    }
+  }
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-emerald-50/35 via-white to-zinc-50/90 pb-16">
@@ -506,7 +536,27 @@ export default function MyApplicationPage() {
                 }}
                 className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:scale-[0.99] lg:self-auto"
               >
-                Submit Deposit
+                <span className="inline-flex items-center gap-2">
+                  <span
+                    className="grid h-6 w-6 place-items-center rounded-md bg-white/15"
+                    aria-hidden="true"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 5v14" />
+                      <path d="M5 12h14" />
+                    </svg>
+                  </span>
+                  Add Payment
+                </span>
               </button>
             </div>
           </div>
@@ -535,22 +585,9 @@ export default function MyApplicationPage() {
           <>
             {tab === "depositRequest" ? (
               <Section title="Deposit request">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-zinc-600">
-                    Submit a deposit and track its approval status.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDepositMessage(null);
-                      setDepositErrors({});
-                      setDepositOpen(true);
-                    }}
-                    className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:scale-[0.99]"
-                  >
-                    Submit deposit
-                  </button>
-                </div>
+                <p className="text-sm text-zinc-600">
+                  Admin submitted deposits will appear here. You can accept or reject.
+                </p>
 
                 {txError ? (
                   <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -562,13 +599,13 @@ export default function MyApplicationPage() {
                   <table className="w-full min-w-[760px] text-left text-sm">
                     <thead>
                       <tr className="border-b border-emerald-900/10 bg-[#1b4332]/[0.06] text-xs font-semibold uppercase tracking-wide text-[#1b4332]">
-                        <th className="px-4 py-3">Type</th>
                         <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Method</th>
+                        <th className="px-4 py-3">Amount</th>
                         <th className="px-4 py-3">Wallet / Bank</th>
                         <th className="px-4 py-3">Transaction no.</th>
                         <th className="px-4 py-3">Screenshot</th>
                         <th className="px-4 py-3">Created</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
@@ -581,7 +618,7 @@ export default function MyApplicationPage() {
                             Loading…
                           </td>
                         </tr>
-                      ) : tx.length === 0 ? (
+                      ) : depositRequests.length === 0 ? (
                         <tr>
                           <td
                             colSpan={7}
@@ -591,18 +628,118 @@ export default function MyApplicationPage() {
                           </td>
                         </tr>
                       ) : (
-                        tx.map((t) => (
+                        depositRequests.map((t) => (
                           <tr key={t.id} className="hover:bg-emerald-50/40">
-                            <td className="px-4 py-3 text-xs font-semibold text-zinc-800">
-                              {t.type === "ADMIN_DEPOSIT"
-                                ? "Admin deposit"
-                                : "User deposit"}
-                            </td>
                             <td className="px-4 py-3">
                               <TxStatusBadge status={t.status} />
                             </td>
+                            <td className="px-4 py-3 text-xs font-semibold text-zinc-800">
+                              {t.amount ? `$ ${t.amount.toLocaleString()}` : "—"}
+                            </td>
                             <td className="px-4 py-3 text-xs text-zinc-700">
-                              {t.method ?? "—"}
+                              {t.method === "wallet"
+                                ? `${t.walletProvider ?? "—"} • ${t.walletId ?? "—"}`
+                                : `${t.bankName ?? "—"}`}
+                            </td>
+                            <td className="px-4 py-3 font-mono text-xs text-zinc-800">
+                              {t.transactionNo ?? "—"}
+                            </td>
+                            <td className="px-4 py-3 text-xs">
+                              {t.screenshotUrl ? (
+                                <a
+                                  href={
+                                    resolvePublicUploadUrl(t.screenshotUrl) ??
+                                    t.screenshotUrl
+                                  }
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="font-semibold text-emerald-700 underline"
+                                >
+                                  View
+                                </a>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-zinc-500">
+                              {new Date(t.createdAt).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {t.status === "PENDING" ? (
+                                <div className="inline-flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => respondToAdminDeposit(t.id, "APPROVED")}
+                                    className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+                                  >
+                                    Accept
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => respondToAdminDeposit(t.id, "DECLINED")}
+                                    className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-zinc-400">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Section>
+            ) : null}
+
+            {tab === "payRecord" ? (
+              <Section title="Pay record">
+                <p className="text-sm text-zinc-600">
+                  Your submitted deposits (pending/approved/declined).
+                </p>
+
+                {txError ? (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    {txError}
+                  </div>
+                ) : null}
+
+                <div className="overflow-x-auto rounded-xl border border-emerald-900/10">
+                  <table className="w-full min-w-[760px] text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-emerald-900/10 bg-[#1b4332]/[0.06] text-xs font-semibold uppercase tracking-wide text-[#1b4332]">
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Amount</th>
+                        <th className="px-4 py-3">Wallet / Bank</th>
+                        <th className="px-4 py-3">Transaction no.</th>
+                        <th className="px-4 py-3">Screenshot</th>
+                        <th className="px-4 py-3">Created</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100">
+                      {txLoading ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-10 text-center text-zinc-500">
+                            Loading…
+                          </td>
+                        </tr>
+                      ) : payRecords.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-10 text-center text-zinc-500">
+                            No pay records yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        payRecords.map((t) => (
+                          <tr key={t.id} className="hover:bg-emerald-50/40">
+                            <td className="px-4 py-3">
+                              <TxStatusBadge status={t.status} />
+                            </td>
+                            <td className="px-4 py-3 text-xs font-semibold text-zinc-800">
+                              {t.amount ? `$ ${t.amount.toLocaleString()}` : "—"}
                             </td>
                             <td className="px-4 py-3 text-xs text-zinc-700">
                               {t.method === "wallet"
@@ -638,12 +775,6 @@ export default function MyApplicationPage() {
                     </tbody>
                   </table>
                 </div>
-              </Section>
-            ) : null}
-
-            {tab === "payRecord" ? (
-              <Section title="Pay record">
-                <p className="text-sm text-zinc-600">Coming soon.</p>
               </Section>
             ) : null}
 
@@ -788,7 +919,7 @@ export default function MyApplicationPage() {
                       <input
                         value={statementQuery}
                         onChange={(e) => setStatementQuery(e.target.value)}
-                        placeholder="Search by transaction ID"
+                        placeholder="Search by transaction ID, Amount"
                         className="min-h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20"
                       />
                     </div>
@@ -813,7 +944,7 @@ export default function MyApplicationPage() {
 
                     <button
                       type="button"
-                      onClick={() => downloadCsvStatement(mobile, filteredTx)}
+                      onClick={() => downloadCsvStatement(mobile, statementRows)}
                       className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
                     >
                       <svg
