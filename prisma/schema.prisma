@@ -45,6 +45,7 @@ model Transaction {
   adminId String?
 
   /** Form fields (based on deposit UI) */
+  amount         Int? // numeric amount (e.g. 30000)
   method         String? // "bank" | "wallet" (kept flexible)
   bankName       String?
   walletProvider String?

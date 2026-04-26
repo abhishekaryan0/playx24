@@ -52,6 +52,7 @@ type TransactionRow = {
   id: string;
   type: "ADMIN_DEPOSIT" | "USER_DEPOSIT";
   status: "PENDING" | "APPROVED" | "DECLINED";
+  amount: number | null;
   method: string | null;
   bankName: string | null;
   walletProvider: string | null;
@@ -241,6 +242,7 @@ export default function MyApplicationPage() {
   const [depositMethod, setDepositMethod] = useState<"bank" | "wallet" | "">(
     "",
   );
+  const [depositAmount, setDepositAmount] = useState("");
   const [depositBankName, setDepositBankName] = useState("");
   const [depositWalletProvider, setDepositWalletProvider] = useState("");
   const [depositWalletId, setDepositWalletId] = useState("");
@@ -338,6 +340,45 @@ export default function MyApplicationPage() {
 
   const application = data?.application ?? undefined;
   const appStatus = application?.status ?? "";
+
+  const filteredTx = useMemo(() => {
+    const q = statementQuery.trim().toLowerCase();
+    const datePreset = statementDate;
+    const now = new Date();
+    const lowerBound =
+      datePreset === "today"
+        ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+        : datePreset === "7d"
+          ? now.getTime() - 7 * 24 * 60 * 60 * 1000
+          : datePreset === "30d"
+            ? now.getTime() - 30 * 24 * 60 * 60 * 1000
+            : null;
+
+    return tx.filter((t) => {
+      if (q) {
+        const hay = `${t.transactionNo ?? ""} ${t.amount ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (lowerBound != null) {
+        const ts = new Date(t.createdAt).getTime();
+        if (!Number.isFinite(ts) || ts < lowerBound) return false;
+      }
+      return true;
+    });
+  }, [statementDate, statementQuery, tx]);
+
+  const statementTotals = useMemo(() => {
+    let totalIn = 0;
+    let totalOut = 0;
+    for (const t of filteredTx) {
+      const amt = typeof t.amount === "number" && Number.isFinite(t.amount) ? t.amount : 0;
+      // For now we treat both ADMIN_DEPOSIT and USER_DEPOSIT as deposits (money coming in).
+      // When you add withdrawals later, we’ll put them into Total OUT.
+      totalIn += amt;
+    }
+    const balance = totalIn - totalOut;
+    return { totalIn, totalOut, balance };
+  }, [filteredTx]);
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-emerald-50/35 via-white to-zinc-50/90 pb-16">
@@ -634,7 +675,7 @@ export default function MyApplicationPage() {
                     />
                     <StatCard
                       title="Total IN"
-                      value={`${tx.length}`}
+                      value={`$ ${statementTotals.totalIn.toLocaleString()}`}
                       tone="emerald"
                       icon={
                         <svg
@@ -654,7 +695,7 @@ export default function MyApplicationPage() {
                     />
                     <StatCard
                       title="Total OUT"
-                      value="0"
+                      value={`- $ ${statementTotals.totalOut.toLocaleString()}`}
                       tone="rose"
                       icon={
                         <svg
@@ -675,7 +716,7 @@ export default function MyApplicationPage() {
                     />
                     <StatCard
                       title="Balance"
-                      value="$ 0"
+                      value={`$ ${statementTotals.balance.toLocaleString()}`}
                       tone="sky"
                       icon={
                         <svg
@@ -695,18 +736,6 @@ export default function MyApplicationPage() {
                       }
                     />
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDepositMessage(null);
-                      setDepositErrors({});
-                      setDepositOpen(true);
-                    }}
-                    className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:scale-[0.99]"
-                  >
-                    Submit Deposit
-                  </button>
                 </div>
 
                 <div className="rounded-2xl border border-emerald-900/10 bg-white p-3 shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03] sm:p-4">
@@ -784,6 +813,7 @@ export default function MyApplicationPage() {
 
                     <button
                       type="button"
+                      onClick={() => downloadCsvStatement(mobile, filteredTx)}
                       className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
                     >
                       <svg
@@ -820,13 +850,7 @@ export default function MyApplicationPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-100">
-                        {tx
-                          .filter((t) => {
-                            const q = statementQuery.trim().toLowerCase();
-                            if (!q) return true;
-                            return (t.transactionNo ?? "").toLowerCase().includes(q);
-                          })
-                          .map((t) => (
+                        {filteredTx.map((t) => (
                             <tr key={t.id} className="hover:bg-emerald-50/40">
                               <td className="px-5 py-4 text-xs text-zinc-700">
                                 {new Date(t.createdAt).toLocaleString()}
@@ -839,17 +863,18 @@ export default function MyApplicationPage() {
                                 {t.transactionNo ?? "—"}
                               </td>
                               <td className="px-5 py-4 text-right text-xs text-zinc-700">
-                                —
+                                $ 0
                               </td>
                               <td className="px-5 py-4 text-right text-xs text-zinc-700">
-                                —
+                                $ {(t.amount ?? 0).toLocaleString()}
                               </td>
                               <td className="px-5 py-4 text-right text-xs text-zinc-700">
-                                —
+                                {/* Running balance is computed in CSV; UI shows total balance for now */}
+                                $ {statementTotals.balance.toLocaleString()}
                               </td>
                             </tr>
                           ))}
-                        {tx.length === 0 ? (
+                        {filteredTx.length === 0 ? (
                           <tr>
                             <td
                               colSpan={6}
@@ -1063,11 +1088,13 @@ export default function MyApplicationPage() {
                 setDepositErrors({});
                 setDepositSaving(true);
                 try {
+                  const amount = Number(depositAmount);
                   const res = await fetch("/api/me/transactions", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                       mobile,
+                      amount,
                       method: depositMethod,
                       bankName: depositBankName,
                       walletProvider: depositWalletProvider,
@@ -1090,6 +1117,7 @@ export default function MyApplicationPage() {
 
                   setDepositOpen(false);
                   setDepositMethod("");
+                  setDepositAmount("");
                   setDepositBankName("");
                   setDepositWalletProvider("");
                   setDepositWalletId("");
@@ -1146,6 +1174,25 @@ export default function MyApplicationPage() {
                 </div>
                 {depositErrors.method ? (
                   <p className="text-xs text-red-600">{depositErrors.method}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  amount
+                </label>
+                <input
+                  inputMode="numeric"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  className={[
+                    "min-h-11 w-full rounded-lg border bg-white px-3 text-sm text-zinc-900 outline-none",
+                    depositErrors.amount ? "border-red-300" : "border-zinc-200",
+                  ].join(" ")}
+                />
+                {depositErrors.amount ? (
+                  <p className="text-xs text-red-600">{depositErrors.amount}</p>
                 ) : null}
               </div>
 
@@ -1477,5 +1524,65 @@ function StatCard({
       </div>
     </div>
   );
+}
+
+function downloadCsvStatement(mobile: string, rows: TransactionRow[]) {
+  const safeMobile = (mobile || "user").replace(/[^\w.-]+/g, "_").slice(0, 50);
+  const filename = `statement-${safeMobile}-${new Date()
+    .toISOString()
+    .slice(0, 10)}.csv`;
+
+  // Sort ascending for running balance
+  const sorted = [...rows].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+
+  let balance = 0;
+  const lines: string[] = [];
+  lines.push(
+    [
+      "Date+Time",
+      "Wallet Details",
+      "Transaction ID",
+      "Withdrawal",
+      "Deposits",
+      "Balance",
+      "Type",
+      "Status",
+    ].join(","),
+  );
+
+  for (const t of sorted) {
+    const amt = typeof t.amount === "number" && Number.isFinite(t.amount) ? t.amount : 0;
+    const withdrawal = 0;
+    const deposit = amt;
+    balance += deposit - withdrawal;
+
+    const walletDetails =
+      (t.walletProvider || t.method || "") + (t.walletId ? ` - ${t.walletId}` : "");
+
+    const cols = [
+      new Date(t.createdAt).toLocaleString(),
+      walletDetails,
+      t.transactionNo ?? "",
+      String(withdrawal),
+      String(deposit),
+      String(balance),
+      t.type,
+      t.status,
+    ].map((c) => `"${String(c).replace(/"/g, '""')}"`);
+
+    lines.push(cols.join(","));
+  }
+
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 

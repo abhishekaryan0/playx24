@@ -6,6 +6,7 @@ export const runtime = "nodejs";
 
 type SubmitBody = {
   mobile?: string;
+  amount?: number;
   method?: string;
   bankName?: string;
   walletProvider?: string;
@@ -59,9 +60,15 @@ export async function POST(req: Request) {
   const walletId = (body?.walletId ?? "").trim();
   const transactionNo = (body?.transactionNo ?? "").trim();
   const screenshotUrl = (body?.screenshotUrl ?? "").trim();
+  const amountRaw = body?.amount;
+  const amount =
+    typeof amountRaw === "number" && Number.isFinite(amountRaw)
+      ? Math.floor(amountRaw)
+      : NaN;
 
   const fieldErrors: Record<string, string> = {};
   if (!method) fieldErrors.method = "Select bank or wallet";
+  if (!Number.isFinite(amount) || amount <= 0) fieldErrors.amount = "Amount is required";
   if (method === "wallet") {
     if (!walletProvider) fieldErrors.walletProvider = "Select your wallet";
     if (!walletId) fieldErrors.walletId = "Wallet ID is required";
@@ -84,6 +91,7 @@ export async function POST(req: Request) {
       userId: user.id,
       type: "USER_DEPOSIT",
       status: "PENDING",
+      amount,
       method,
       bankName: bankName || null,
       walletProvider: walletProvider || null,
