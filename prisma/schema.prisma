@@ -11,6 +11,17 @@ enum ApplicationType {
   AGENT
 }
 
+enum TransactionType {
+  ADMIN_DEPOSIT
+  USER_DEPOSIT
+}
+
+enum TransactionStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
 model User {
   id        String   @id @default(cuid())
   mobile    String   @unique
@@ -19,6 +30,36 @@ model User {
   updatedAt DateTime @updatedAt
 
   applications Application[]
+  transactions Transaction[]
+}
+
+model Transaction {
+  id        String            @id @default(cuid())
+  type      TransactionType
+  status    TransactionStatus @default(PENDING)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /** Optional identifier for the admin who created/approved/declined */
+  adminId String?
+
+  /** Form fields (based on deposit UI) */
+  method         String? // "bank" | "wallet" (kept flexible)
+  bankName       String?
+  walletProvider String?
+  walletId       String?
+  transactionNo  String?
+  screenshotUrl  String?
+
+  note String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([type, createdAt])
 }
 
 model Application {

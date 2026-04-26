@@ -307,9 +307,11 @@ export default function AdminPage() {
       />
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <div className="mb-5 rounded-2xl border border-emerald-900/10 bg-white p-4 shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="mb-5 overflow-hidden rounded-2xl border border-emerald-900/10 bg-white shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
+          <div className="h-1 bg-gradient-to-r from-emerald-200/80 via-emerald-100 to-transparent" />
+          <div className="bg-gradient-to-b from-emerald-50/70 to-white px-3 py-3 sm:px-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
               <StatusTab
                 active={statusFilter === "APPROVED"}
                 onClick={() => {
@@ -346,114 +348,72 @@ export default function AdminPage() {
               >
                 Draft
               </StatusTab>
-              <StatusTab
-                active={statusFilter === "ALL"}
-                onClick={() => {
-                  setStatusFilter("ALL");
-                  setPage(1);
-                }}
-              >
-                All
-              </StatusTab>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center lg:justify-end">
-              <div className="relative">
-                <input
-                  value={q}
-                  onChange={(e) => {
-                    setQ(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Search name / mobile / telegram…"
-                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20 lg:w-[260px]"
-                />
-              </div>
-
-              <select
-                value={typeFilter}
-                onChange={(e) => {
-                  setTypeFilter(e.target.value as any);
-                  setPage(1);
-                }}
-                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20"
-                aria-label="Select agent type"
-              >
-                <option value="ALL">Select Agent</option>
-                <option value="AGENT">Referral agent</option>
-                <option value="WALLET_BANK_AGENT">Wallet agent</option>
-              </select>
-
-              <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:col-auto lg:flex lg:items-center">
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto] lg:flex lg:items-center lg:justify-end">
                 <div className="relative">
-                  <input
-                    type="date"
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="m21 21-4.3-4.3" />
+                    </svg>
+                  </span>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => {
+                      setTypeFilter(e.target.value as any);
+                      setPage(1);
+                    }}
+                    className="h-10 w-full appearance-none rounded-full border border-zinc-200 bg-white pl-9 pr-10 text-sm font-medium text-zinc-700 shadow-sm outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20 lg:w-[260px]"
+                    aria-label="Select agent type"
+                  >
+                    <option value="ALL">Select Agent</option>
+                    <option value="AGENT">Referral agent</option>
+                    <option value="WALLET_BANK_AGENT">Wallet agent</option>
+                  </select>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path d="M5.5 7.5l4.5 5 4.5-5H5.5z" />
+                    </svg>
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <DateChip
+                    label="From :"
                     value={from}
-                    onChange={(e) => {
-                      setFrom(e.target.value);
+                    onChange={(v) => {
+                      setFrom(v);
                       setPage(1);
                     }}
-                    className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20"
-                    aria-label="From date"
+                    ariaLabel="From date"
                   />
-                </div>
-                <div className="relative">
-                  <input
-                    type="date"
+                  <DateChip
+                    label="To :"
                     value={to}
-                    onChange={(e) => {
-                      setTo(e.target.value);
+                    onChange={(v) => {
+                      setTo(v);
                       setPage(1);
                     }}
-                    className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20"
-                    aria-label="To date"
+                    ariaLabel="To date"
                   />
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-zinc-500">
-              Showing <span className="font-medium text-zinc-700">{showingFrom}</span>
-              {" - "}
-              <span className="font-medium text-zinc-700">{showingTo}</span> of{" "}
-              <span className="font-medium text-zinc-700">{total}</span>
-            </p>
-            <div className="flex items-center gap-2">
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="h-9 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-700 outline-none"
-                aria-label="Rows per page"
-              >
-                <option value={10}>10 / page</option>
-                <option value={20}>20 / page</option>
-                <option value={50}>50 / page</option>
-              </select>
-              <div className="inline-flex overflow-hidden rounded-lg border border-zinc-200 bg-white">
-                <button
-                  type="button"
-                  disabled={page <= 1 || listLoading}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="h-9 px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
-                >
-                  Prev
-                </button>
-                <div className="grid h-9 place-items-center border-x border-zinc-200 px-3 text-xs text-zinc-500">
-                  {page} / {totalPages}
-                </div>
-                <button
-                  type="button"
-                  disabled={page >= totalPages || listLoading}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="h-9 px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
-                >
-                  Next
-                </button>
               </div>
             </div>
           </div>
@@ -568,6 +528,51 @@ export default function AdminPage() {
             </table>
           </div>
         </div>
+
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-zinc-500">
+            Showing <span className="font-medium text-zinc-700">{showingFrom}</span>
+            {" - "}
+            <span className="font-medium text-zinc-700">{showingTo}</span> of{" "}
+            <span className="font-medium text-zinc-700">{total}</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              className="h-9 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-700 outline-none"
+              aria-label="Rows per page"
+            >
+              <option value={10}>10 / page</option>
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
+            </select>
+            <div className="inline-flex overflow-hidden rounded-lg border border-zinc-200 bg-white">
+              <button
+                type="button"
+                disabled={page <= 1 || listLoading}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="h-9 px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <div className="grid h-9 place-items-center border-x border-zinc-200 px-3 text-xs text-zinc-500">
+                {page} / {totalPages}
+              </div>
+              <button
+                type="button"
+                disabled={page >= totalPages || listLoading}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="h-9 px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   );
@@ -587,7 +592,7 @@ function StatusTab({
       type="button"
       onClick={onClick}
       className={[
-        "inline-flex h-9 items-center justify-center rounded-lg border px-3 text-xs font-semibold transition",
+        "inline-flex h-8 items-center justify-center rounded-full border px-3 text-xs font-medium shadow-sm transition",
         active
           ? "border-emerald-200 bg-emerald-50 text-[#1b4332]"
           : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50",
@@ -595,6 +600,48 @@ function StatusTab({
     >
       {children}
     </button>
+  );
+}
+
+function DateChip({
+  label,
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <label className="flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-600 shadow-sm">
+      <span className="whitespace-nowrap">{label}</span>
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-5 w-[8.25rem] bg-transparent text-xs text-zinc-700 outline-none"
+        aria-label={ariaLabel}
+      />
+      <span className="text-zinc-400" aria-hidden="true">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <path d="M16 2v4" />
+          <path d="M8 2v4" />
+          <path d="M3 10h18" />
+        </svg>
+      </span>
+    </label>
   );
 }
 
