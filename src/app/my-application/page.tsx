@@ -322,8 +322,8 @@ export default function MyApplicationPage() {
         existing ||
         (await swReg.pushManager.subscribe({
           userVisibleOnly: true,
-          appServerKey: appServerKey as any,
-        } as any));
+          applicationServerKey: appServerKey,
+        }));
 
       const resp = await fetch("/api/me/push/subscribe", {
         method: "POST",
