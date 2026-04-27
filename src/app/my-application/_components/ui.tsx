@@ -112,11 +112,11 @@ export function DashTab({
 export function FinanceRow({
   label,
   helper,
-  placeholder,
+  value,
 }: {
   label: string;
   helper?: string;
-  placeholder: string;
+  value: string;
 }) {
   return (
     <div className="grid gap-2 sm:grid-cols-[120px_1fr] sm:items-center">
@@ -130,11 +130,52 @@ export function FinanceRow({
       </div>
       <input
         disabled
-        defaultValue=""
-        placeholder={placeholder}
+        value={value}
+        readOnly
         className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none placeholder:text-zinc-300 disabled:cursor-not-allowed"
       />
     </div>
+  );
+}
+
+export function TierPill({
+  tierLabel,
+  pillClassName,
+  iconClassName,
+}: {
+  tierLabel: string;
+  pillClassName: string;
+  iconClassName: string;
+}) {
+  return (
+    <span
+      className={[
+        "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold shadow-sm",
+        pillClassName,
+      ].join(" ")}
+    >
+      <span
+        className={[
+          "grid h-6 w-6 place-items-center rounded-full ring-1 ring-black/5",
+          iconClassName,
+        ].join(" ")}
+        aria-hidden="true"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7Z" />
+        </svg>
+      </span>
+      <span className="whitespace-nowrap">{tierLabel}</span>
+    </span>
   );
 }
 

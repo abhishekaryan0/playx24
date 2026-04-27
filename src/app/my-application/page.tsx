@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminHeader } from "@/app/admin/_components/AdminHeader";
 import { applicationTypeLabel } from "@/lib/application-type";
 import { resolvePublicUploadUrl } from "@/lib/upload-url";
+import { formatCommissionPercent, getCommissionTier } from "@/lib/commission-tier";
 import type {
   ApiResponse,
   ApplicationDetail,
@@ -19,6 +20,7 @@ import {
   Section,
   StatCard,
   StatusPill,
+  TierPill,
   TxStatusBadge,
 } from "./_components/ui";
 
@@ -286,6 +288,36 @@ export default function MyApplicationPage() {
     return { totalIn, totalOut, balance };
   }, [statementRows]);
 
+  const finance = useMemo(() => {
+    const approved = tx.filter((t) => t.status === "APPROVED");
+    const cashIn = approved
+      .filter((t) => t.type === "USER_DEPOSIT")
+      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+    const cashOut = approved
+      .filter((t) => t.type === "ADMIN_DEPOSIT")
+      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+    const balance = cashIn - cashOut;
+    const tier = getCommissionTier(cashIn);
+    const commission = Math.round(cashIn * tier.rate);
+
+    const approvedUserDeposits = approved.filter(
+      (t) => t.type === "USER_DEPOSIT" && t.adminId,
+    );
+    const actSeconds =
+      approvedUserDeposits.length === 0
+        ? null
+        : approvedUserDeposits.reduce((sum, t) => {
+            const a = new Date(t.createdAt).getTime();
+            const b = new Date(t.updatedAt).getTime();
+            const d = Number.isFinite(a) && Number.isFinite(b) ? Math.max(0, b - a) : 0;
+            return sum + d;
+          }, 0) /
+          approvedUserDeposits.length /
+          1000;
+
+    return { cashIn, cashOut, balance, tier, commission, actSeconds };
+  }, [tx]);
+
   async function respondToAdminDeposit(id: string, next: "APPROVED" | "DECLINED") {
     try {
       const res = await fetch(`/api/me/transactions/${id}`, {
@@ -312,6 +344,11 @@ export default function MyApplicationPage() {
           mobile ? (
             <div className="flex flex-wrap items-center justify-end gap-2">
               <span className="font-mono text-xs text-zinc-500">{mobile}</span>
+              <TierPill
+                tierLabel={finance.tier.label}
+                pillClassName={finance.tier.pillClassName}
+                iconClassName={finance.tier.iconClassName}
+              />
               {appStatus ? <StatusPill status={appStatus} /> : null}
             </div>
           ) : null
@@ -1043,14 +1080,21 @@ export default function MyApplicationPage() {
 
               <aside className="space-y-6 lg:sticky lg:top-6">
                 <Section title="Finance">
-                  <FinanceRow label="Commission:" placeholder="amount" />
-                  <FinanceRow label="Cash In:" placeholder="amount" />
-                  <FinanceRow label="Cash Out:" placeholder="amount" />
-                  <FinanceRow label="Balance:" placeholder="amount" />
+                  <FinanceRow
+                    label="Commission:"
+                    value={finance.commission.toLocaleString()}
+                  />
+                  <FinanceRow label="Cash In:" value={finance.cashIn.toLocaleString()} />
+                  <FinanceRow label="Cash Out:" value={finance.cashOut.toLocaleString()} />
+                  <FinanceRow label="Balance:" value={finance.balance.toLocaleString()} />
                   <FinanceRow
                     label="ACT"
                     helper="(Average Confirmation Time)"
-                    placeholder="5.00 s"
+                    value={
+                      finance.actSeconds == null
+                        ? "—"
+                        : `${finance.actSeconds.toFixed(2)} s`
+                    }
                   />
                 </Section>
                 <Section title="Status">

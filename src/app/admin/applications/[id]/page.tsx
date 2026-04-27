@@ -12,6 +12,7 @@ import {
 import { AdminHeader } from "../../_components/AdminHeader";
 import { resolvePublicUploadUrl } from "@/lib/upload-url";
 import { downloadCsvStatement } from "@/app/my-application/_components/utils";
+import { formatCommissionPercent, getCommissionTier } from "@/lib/commission-tier";
 
 type ApplicationDetail = {
   id: string;
@@ -324,10 +325,10 @@ function DashTab({
 
 function FinanceRow({
   label,
-  placeholder,
+  value,
 }: {
   label: string;
-  placeholder: string;
+  value: string;
 }) {
   return (
     <div className="grid gap-2 sm:grid-cols-[120px_1fr] sm:items-center">
@@ -336,11 +337,52 @@ function FinanceRow({
       </div>
       <input
         disabled
-        defaultValue=""
-        placeholder={placeholder}
+        value={value}
+        readOnly
         className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none placeholder:text-zinc-300 disabled:cursor-not-allowed"
       />
     </div>
+  );
+}
+
+function TierPill({
+  tierLabel,
+  pillClassName,
+  iconClassName,
+}: {
+  tierLabel: string;
+  pillClassName: string;
+  iconClassName: string;
+}) {
+  return (
+    <span
+      className={[
+        "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold shadow-sm",
+        pillClassName,
+      ].join(" ")}
+    >
+      <span
+        className={[
+          "grid h-6 w-6 place-items-center rounded-full ring-1 ring-black/5",
+          iconClassName,
+        ].join(" ")}
+        aria-hidden="true"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7Z" />
+        </svg>
+      </span>
+      <span className="whitespace-nowrap">{tierLabel}</span>
+    </span>
   );
 }
 
@@ -447,6 +489,36 @@ export default function AdminApplicationViewPage() {
   }, [statementRows]);
 
   const adminSubmittedRows = useMemo(() => adminDeposits, [adminDeposits]);
+
+  const finance = useMemo(() => {
+    const approved = tx.filter((t) => t.status === "APPROVED");
+    const cashIn = approved
+      .filter((t) => t.type === "USER_DEPOSIT")
+      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+    const cashOut = approved
+      .filter((t) => t.type === "ADMIN_DEPOSIT")
+      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+    const balance = cashIn - cashOut;
+    const tier = getCommissionTier(cashIn);
+    const commission = Math.round(cashIn * tier.rate);
+
+    const approvedUserDeposits = approved.filter(
+      (t) => t.type === "USER_DEPOSIT" && t.adminId,
+    );
+    const actSeconds =
+      approvedUserDeposits.length === 0
+        ? null
+        : approvedUserDeposits.reduce((sum, t) => {
+            const a = new Date(t.createdAt).getTime();
+            const b = new Date(t.updatedAt).getTime();
+            const d = Number.isFinite(a) && Number.isFinite(b) ? Math.max(0, b - a) : 0;
+            return sum + d;
+          }, 0) /
+          approvedUserDeposits.length /
+          1000;
+
+    return { cashIn, cashOut, balance, tier, commission, actSeconds };
+  }, [tx]);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -630,6 +702,11 @@ export default function AdminApplicationViewPage() {
         }
         actions={
           <>
+            <TierPill
+              tierLabel={finance.tier.label}
+              pillClassName={finance.tier.pillClassName}
+              iconClassName={finance.tier.iconClassName}
+            />
             <StatusPill status={app.status} />
             {pending ? (
               <>
@@ -1030,10 +1107,16 @@ export default function AdminApplicationViewPage() {
 
             <Section title="Finance">
               <div className="grid gap-3">
-                <FinanceRow label="Commission:" placeholder="amount" />
-                <FinanceRow label="Cash In:" placeholder="amount" />
-                <FinanceRow label="Cash Out:" placeholder="amount" />
-                <FinanceRow label="Balance" placeholder="amount" />
+                <FinanceRow label="Commission:" value={finance.commission.toLocaleString()} />
+                <FinanceRow label="Cash In:" value={finance.cashIn.toLocaleString()} />
+                <FinanceRow label="Cash Out:" value={finance.cashOut.toLocaleString()} />
+                <FinanceRow label="Balance" value={finance.balance.toLocaleString()} />
+                <FinanceRow
+                  label="ACT"
+                  value={
+                    finance.actSeconds == null ? "—" : `${finance.actSeconds.toFixed(2)} s`
+                  }
+                />
               </div>
             </Section>
           </div>
@@ -1277,10 +1360,18 @@ export default function AdminApplicationViewPage() {
             <aside className="space-y-6 lg:sticky lg:top-6">
               <Section title="Finance">
                 <div className="grid gap-3">
-                  <FinanceRow label="Commission:" placeholder="amount" />
-                  <FinanceRow label="Cash In:" placeholder="amount" />
-                  <FinanceRow label="Cash Out:" placeholder="amount" />
-                  <FinanceRow label="Balance" placeholder="amount" />
+                  <FinanceRow label="Commission:" value={finance.commission.toLocaleString()} />
+                  <FinanceRow label="Cash In:" value={finance.cashIn.toLocaleString()} />
+                  <FinanceRow label="Cash Out:" value={finance.cashOut.toLocaleString()} />
+                  <FinanceRow label="Balance" value={finance.balance.toLocaleString()} />
+                  <FinanceRow
+                    label="ACT"
+                    value={
+                      finance.actSeconds == null
+                        ? "—"
+                        : `${finance.actSeconds.toFixed(2)} s`
+                    }
+                  />
                 </div>
               </Section>
 
