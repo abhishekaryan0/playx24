@@ -318,6 +318,34 @@ export default function MyApplicationPage() {
     return { cashIn, cashOut, balance, tier, commission, actSeconds };
   }, [tx]);
 
+  function formatAct(seconds: number | null) {
+    if (seconds == null || !Number.isFinite(seconds)) return "—";
+    const s = Math.max(0, seconds);
+    if (s < 60) return `${s.toFixed(2)} s`;
+    const totalSeconds = Math.round(s);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const remSeconds = totalSeconds % 60;
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m ${remSeconds}s`;
+  }
+
+  const statementTableRows = useMemo(() => {
+    const sorted = [...statementRows].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+    let running = 0;
+    return sorted.map((t) => {
+      const amt = typeof t.amount === "number" && Number.isFinite(t.amount) ? t.amount : 0;
+      const withdrawal = t.type === "ADMIN_DEPOSIT" ? amt : 0;
+      const deposit = t.type === "USER_DEPOSIT" ? amt : 0;
+      running += deposit - withdrawal;
+      return { t, withdrawal, deposit, running };
+    });
+  }, [statementRows]);
+
   async function respondToAdminDeposit(id: string, next: "APPROVED" | "DECLINED") {
     try {
       const res = await fetch(`/api/me/transactions/${id}`, {
@@ -909,31 +937,30 @@ export default function MyApplicationPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-100">
-                        {statementRows.map((t) => (
-                            <tr key={t.id} className="hover:bg-emerald-50/40">
-                              <td className="px-5 py-4 text-xs text-zinc-700">
-                                {new Date(t.createdAt).toLocaleString()}
-                              </td>
-                              <td className="px-5 py-4 text-xs text-zinc-700">
-                                {(t.walletProvider || t.method || "—") +
-                                  (t.walletId ? ` - ${t.walletId}` : "")}
-                              </td>
-                              <td className="px-5 py-4 font-mono text-xs text-zinc-800">
-                                {t.transactionNo ?? "—"}
-                              </td>
-                              <td className="px-5 py-4 text-right text-xs text-zinc-700">
-                                0
-                              </td>
-                              <td className="px-5 py-4 text-right text-xs text-zinc-700">
-                                {(t.amount ?? 0).toLocaleString()}
-                              </td>
-                              <td className="px-5 py-4 text-right text-xs text-zinc-700">
-                                {/* Running balance is computed in CSV; UI shows total balance for now */}
-                                {statementTotals.balance.toLocaleString()}
-                              </td>
-                            </tr>
-                          ))}
-                        {statementRows.length === 0 ? (
+                        {statementTableRows.map(({ t, withdrawal, deposit, running }) => (
+                          <tr key={t.id} className="hover:bg-emerald-50/40">
+                            <td className="px-5 py-4 text-xs text-zinc-700">
+                              {new Date(t.createdAt).toLocaleString()}
+                            </td>
+                            <td className="px-5 py-4 text-xs text-zinc-700">
+                              {(t.walletProvider || t.method || "—") +
+                                (t.walletId ? ` - ${t.walletId}` : "")}
+                            </td>
+                            <td className="px-5 py-4 font-mono text-xs text-zinc-800">
+                              {t.transactionNo ?? "—"}
+                            </td>
+                            <td className="px-5 py-4 text-right text-xs text-zinc-700">
+                              {withdrawal ? withdrawal.toLocaleString() : 0}
+                            </td>
+                            <td className="px-5 py-4 text-right text-xs text-zinc-700">
+                              {deposit ? deposit.toLocaleString() : 0}
+                            </td>
+                            <td className="px-5 py-4 text-right text-xs text-zinc-700">
+                              {running.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                        {statementTableRows.length === 0 ? (
                           <tr>
                             <td
                               colSpan={6}
@@ -1090,11 +1117,7 @@ export default function MyApplicationPage() {
                   <FinanceRow
                     label="ACT"
                     helper="(Average Confirmation Time)"
-                    value={
-                      finance.actSeconds == null
-                        ? "—"
-                        : `${finance.actSeconds.toFixed(2)} s`
-                    }
+                    value={formatAct(finance.actSeconds)}
                   />
                 </Section>
                 <Section title="Status">
