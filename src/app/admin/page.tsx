@@ -46,9 +46,6 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState<
     "ALL" | "APPROVED" | "REJECTED" | "PENDING" | "DRAFT"
   >("ALL");
-  const [typeFilter, setTypeFilter] = useState<"ALL" | "AGENT" | "WALLET_BANK_AGENT">(
-    "ALL",
-  );
   const [q, setQ] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -69,7 +66,6 @@ export default function AdminPage() {
       params.set("page", String(page));
       params.set("pageSize", String(pageSize));
       if (statusFilter !== "ALL") params.set("status", statusFilter);
-      if (typeFilter !== "ALL") params.set("type", typeFilter);
       if (q.trim()) params.set("q", q.trim());
       if (from) params.set("from", from);
       if (to) params.set("to", to);
@@ -95,13 +91,13 @@ export default function AdminPage() {
     } finally {
       setListLoading(false);
     }
-  }, [from, page, pageSize, q, statusFilter, to, typeFilter]);
+  }, [from, page, pageSize, q, statusFilter, to]);
 
   useEffect(() => {
     if (!authed) return;
     loadApplications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authed, page, pageSize, statusFilter, typeFilter, from, to, q]);
+  }, [authed, page, pageSize, statusFilter, from, to, q]);
 
   useEffect(() => {
     (async () => {
@@ -283,6 +279,7 @@ export default function AdminPage() {
       <AdminHeader
         title="Applications"
         description="Review agent submissions — approve, reject, or open full details."
+        maxWidth="wide"
         actions={
           <>
             <button
@@ -306,7 +303,7 @@ export default function AdminPage() {
         }
       />
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
         <div className="mb-5 overflow-hidden rounded-2xl border border-emerald-900/10 bg-white shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
           <div className="h-1 bg-gradient-to-r from-emerald-200/80 via-emerald-100 to-transparent" />
           <div className="bg-gradient-to-b from-emerald-50/70 to-white px-3 py-3 sm:px-4">
@@ -368,33 +365,19 @@ export default function AdminPage() {
                       <path d="m21 21-4.3-4.3" />
                     </svg>
                   </span>
-                  <select
-                    value={typeFilter}
+                  <input
+                    value={q}
                     onChange={(e) => {
-                      setTypeFilter(e.target.value as any);
+                      setQ(e.target.value);
                       setPage(1);
                     }}
-                    className="h-10 w-full appearance-none rounded-full border border-zinc-200 bg-white pl-9 pr-10 text-sm font-medium text-zinc-700 shadow-sm outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20 lg:w-[260px]"
-                    aria-label="Select agent type"
-                  >
-                    <option value="ALL">Select Agent</option>
-                    <option value="AGENT">Referral agent</option>
-                    <option value="WALLET_BANK_AGENT">Wallet agent</option>
-                  </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path d="M5.5 7.5l4.5 5 4.5-5H5.5z" />
-                    </svg>
-                  </span>
+                    placeholder="Search agent…"
+                    className="h-10 w-full rounded-full border border-zinc-200 bg-white pl-9 pr-4 text-sm font-medium text-zinc-700 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-600/20 lg:w-[320px]"
+                    aria-label="Search agent"
+                  />
                 </div>
 
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <DateChip
                     label="From :"
                     value={from}

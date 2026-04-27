@@ -8,7 +8,7 @@ type AdminHeaderProps = {
   description?: string;
   back?: { href: string; label: string };
   actions?: React.ReactNode;
-  maxWidth?: "4xl" | "6xl";
+  maxWidth?: "4xl" | "6xl" | "wide";
   /** Extra row under title (e.g. application id) */
   meta?: React.ReactNode;
 };
@@ -18,10 +18,15 @@ export function AdminHeader({
   description,
   back,
   actions,
-  maxWidth = "6xl",
+  maxWidth = "wide",
   meta,
 }: AdminHeaderProps) {
-  const mw = maxWidth === "4xl" ? "max-w-4xl" : "max-w-6xl";
+  const mw =
+    maxWidth === "4xl"
+      ? "max-w-4xl"
+      : maxWidth === "6xl"
+        ? "max-w-6xl"
+        : "max-w-[1400px]";
   return (
     <header className="relative overflow-hidden border-b border-emerald-900/10 bg-white shadow-[0_4px_24px_rgba(27,67,50,0.07)]">
       <div className="h-1.5 bg-[#1b4332]" aria-hidden />

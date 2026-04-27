@@ -304,7 +304,7 @@ export default function MyApplicationPage() {
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-emerald-50/35 via-white to-zinc-50/90 pb-16">
       <AdminHeader
-        maxWidth="6xl"
+        maxWidth="wide"
         title="Applications"
         description="Full submission including documents and linked account."
         back={{ href: "/", label: "Back to login" }}
@@ -318,7 +318,7 @@ export default function MyApplicationPage() {
         }
       />
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-[1400px] space-y-6 px-4 py-8 sm:px-6">
         {mobile ? (
           <div className="rounded-2xl border border-emerald-900/10 bg-white shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
             <div className="flex flex-col gap-3 px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
@@ -525,7 +525,7 @@ export default function MyApplicationPage() {
                               <TxStatusBadge status={t.status} />
                             </td>
                             <td className="px-4 py-3 text-xs font-semibold text-zinc-800">
-                              {t.amount ? `$ ${t.amount.toLocaleString()}` : "—"}
+                              {t.amount ? t.amount.toLocaleString() : "—"}
                             </td>
                             <td className="px-4 py-3 text-xs text-zinc-700">
                               {t.method === "wallet"
@@ -630,7 +630,7 @@ export default function MyApplicationPage() {
                               <TxStatusBadge status={t.status} />
                             </td>
                             <td className="px-4 py-3 text-xs font-semibold text-zinc-800">
-                              {t.amount ? `$ ${t.amount.toLocaleString()}` : "—"}
+                              {t.amount ? t.amount.toLocaleString() : "—"}
                             </td>
                             <td className="px-4 py-3 text-xs text-zinc-700">
                               {t.method === "wallet"
@@ -675,7 +675,7 @@ export default function MyApplicationPage() {
                   <div className="grid gap-3 sm:grid-cols-4">
                     <StatCard
                       title="Commission"
-                      value="$ 0"
+                      value="0"
                       tone="amber"
                       icon={
                         <svg
@@ -697,7 +697,7 @@ export default function MyApplicationPage() {
                     />
                     <StatCard
                       title="Total IN"
-                      value={`$ ${statementTotals.totalIn.toLocaleString()}`}
+                      value={statementTotals.totalIn.toLocaleString()}
                       tone="emerald"
                       icon={
                         <svg
@@ -717,7 +717,7 @@ export default function MyApplicationPage() {
                     />
                     <StatCard
                       title="Total OUT"
-                      value={`- $ ${statementTotals.totalOut.toLocaleString()}`}
+                      value={`- ${statementTotals.totalOut.toLocaleString()}`}
                       tone="rose"
                       icon={
                         <svg
@@ -738,7 +738,7 @@ export default function MyApplicationPage() {
                     />
                     <StatCard
                       title="Balance"
-                      value={`$ ${statementTotals.balance.toLocaleString()}`}
+                      value={statementTotals.balance.toLocaleString()}
                       tone="sky"
                       icon={
                         <svg
@@ -885,14 +885,14 @@ export default function MyApplicationPage() {
                                 {t.transactionNo ?? "—"}
                               </td>
                               <td className="px-5 py-4 text-right text-xs text-zinc-700">
-                                $ 0
+                                0
                               </td>
                               <td className="px-5 py-4 text-right text-xs text-zinc-700">
-                                $ {(t.amount ?? 0).toLocaleString()}
+                                {(t.amount ?? 0).toLocaleString()}
                               </td>
                               <td className="px-5 py-4 text-right text-xs text-zinc-700">
                                 {/* Running balance is computed in CSV; UI shows total balance for now */}
-                                $ {statementTotals.balance.toLocaleString()}
+                                {statementTotals.balance.toLocaleString()}
                               </td>
                             </tr>
                           ))}
@@ -1103,7 +1103,7 @@ export default function MyApplicationPage() {
             </div>
 
             <form
-              className="space-y-4 px-5 py-5"
+              className="max-h-[78vh] overflow-auto space-y-4 px-5 py-5"
               onSubmit={async (e) => {
                 e.preventDefault();
                 setDepositMessage(null);
