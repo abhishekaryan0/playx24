@@ -262,54 +262,97 @@ export default function MyApplicationPage() {
   }, [mobile]);
 
   async function enablePush() {
-    const supported =
-      "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-    if (!supported) {
-      setToast({
-        title: "Not supported",
-        message: "Push notifications are not supported on this device/browser.",
+    try {
+      const supported =
+        "serviceWorker" in navigator &&
+        "PushManager" in window &&
+        "Notification" in window;
+      if (!supported) {
+        setToast({
+          title: "Not supported",
+          message: "Push notifications are not supported on this device/browser.",
+        });
+        return;
+      }
+      if (!mobile) {
+        setToast({
+          title: "Login required",
+          message: "Please login first to enable notifications.",
+        });
+        return;
+      }
+      if (!window.isSecureContext) {
+        setToast({
+          title: "HTTPS required",
+          message: "Push notifications require HTTPS (or localhost).",
+        });
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      setPushStatus(permission as any);
+      if (permission !== "granted") {
+        setToast({
+          title: "Permission blocked",
+          message:
+            permission === "denied"
+              ? "Please allow notifications in your browser settings."
+              : "Notification permission was not granted.",
+        });
+        return;
+      }
+
+      const swReg = await navigator.serviceWorker.register("/sw.js");
+
+      const pkRes = await fetch("/api/me/push/public-key");
+      const pkJson = (await pkRes.json().catch(() => null)) as
+        | { publicKey?: string; error?: string }
+        | null;
+      if (!pkRes.ok || !pkJson?.publicKey) {
+        setToast({
+          title: "Push not configured",
+          message: pkJson?.error || "Missing VAPID keys on server.",
+        });
+        return;
+      }
+
+      const appServerKey = urlBase64ToUint8Array(pkJson.publicKey);
+      const existing = await swReg.pushManager.getSubscription();
+      const sub =
+        existing ||
+        (await swReg.pushManager.subscribe({
+          userVisibleOnly: true,
+          appServerKey: appServerKey as any,
+        } as any));
+
+      const resp = await fetch("/api/me/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mobile,
+          subscription: sub.toJSON(),
+          userAgent: navigator.userAgent,
+        }),
       });
-      return;
-    }
-    if (!mobile) return;
+      const rj = (await resp.json().catch(() => null)) as { error?: string } | null;
+      if (!resp.ok) {
+        setToast({
+          title: "Failed",
+          message: rj?.error || "Could not save subscription.",
+        });
+        return;
+      }
 
-    const permission = await Notification.requestPermission();
-    setPushStatus(permission as any);
-    if (permission !== "granted") return;
-
-    const swReg = await navigator.serviceWorker.register("/sw.js");
-
-    const pkRes = await fetch("/api/me/push/public-key");
-    const pkJson = (await pkRes.json().catch(() => null)) as
-      | { publicKey?: string; error?: string }
-      | null;
-    if (!pkRes.ok || !pkJson?.publicKey) {
       setToast({
-        title: "Push not configured",
-        message: pkJson?.error || "Missing VAPID keys on server.",
+        title: existing ? "Already enabled" : "Enabled",
+        message: "Push notifications are enabled on this device.",
       });
-      return;
+    } catch (e: unknown) {
+      setToast({
+        title: "Failed",
+        message: e instanceof Error ? e.message : "Could not enable notifications.",
+      });
     }
-
-    const appServerKey = urlBase64ToUint8Array(pkJson.publicKey);
-    const sub =
-      (await swReg.pushManager.getSubscription()) ||
-      (await swReg.pushManager.subscribe({
-        userVisibleOnly: true,
-        appServerKey: appServerKey as any,
-      } as any));
-
-    await fetch("/api/me/push/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mobile,
-        subscription: sub.toJSON(),
-        userAgent: navigator.userAgent,
-      }),
-    });
-
-    setToast({ title: "Enabled", message: "Push notifications enabled." });
   }
 
   function urlBase64ToUint8Array(base64String: string) {
