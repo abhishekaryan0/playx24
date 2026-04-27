@@ -391,12 +391,15 @@ export default function AdminApplicationViewPage() {
   const [paymentScreenshotName, setPaymentScreenshotName] = useState<string>("");
 
   // Must stay above any conditional return to keep hook order stable.
+  // In admin:
+  // - Deposit Request = user-submitted deposits (USER_DEPOSIT) needing review.
+  // - Admin deposit = admin-created deposits (ADMIN_DEPOSIT) shown under Finance.
   const depositRequests = useMemo(
-    () => tx.filter((t) => t.type === "ADMIN_DEPOSIT"),
+    () => tx.filter((t) => t.type === "USER_DEPOSIT"),
     [tx],
   );
-  const payRecords = useMemo(
-    () => tx.filter((t) => t.type === "USER_DEPOSIT"),
+  const adminDeposits = useMemo(
+    () => tx.filter((t) => t.type === "ADMIN_DEPOSIT"),
     [tx],
   );
 
@@ -443,7 +446,7 @@ export default function AdminApplicationViewPage() {
     return { totalIn, totalOut, balance };
   }, [statementRows]);
 
-  const adminSubmittedRows = useMemo(() => depositRequests, [depositRequests]);
+  const adminSubmittedRows = useMemo(() => adminDeposits, [adminDeposits]);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -713,7 +716,7 @@ export default function AdminApplicationViewPage() {
         {tab === "depositRequest" ? (
           <Section title="Deposit request">
             <p className="text-sm text-zinc-600">
-              Admin submitted deposits for this user.
+              User submitted deposits for this user.
             </p>
 
             {txError ? (
