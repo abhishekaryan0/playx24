@@ -10,6 +10,7 @@ import type {
   ApiResponse,
   ApplicationDetail,
   DashboardTab,
+  NotificationRow,
   TransactionRow,
 } from "./_components/types";
 import { downloadCsvStatement, isRecord } from "./_components/utils";
@@ -127,6 +128,11 @@ export default function MyApplicationPage() {
   const [tx, setTx] = useState<TransactionRow[]>([]);
   const [txLoading, setTxLoading] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
+  const [toast, setToast] = useState<{ title: string; message: string } | null>(null);
+  const [pushStatus, setPushStatus] = useState<
+    "unsupported" | "default" | "granted" | "denied"
+  >("default");
 
   const [depositOpen, setDepositOpen] = useState(false);
   const [depositSaving, setDepositSaving] = useState(false);
@@ -154,6 +160,17 @@ export default function MyApplicationPage() {
     const m = window.localStorage.getItem(storageKey) ?? "";
     setMobile(m);
   }, [storageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const supported =
+      "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+    if (!supported) {
+      setPushStatus("unsupported");
+      return;
+    }
+    setPushStatus(Notification.permission as any);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -216,10 +233,109 @@ export default function MyApplicationPage() {
     }
   }, [mobile]);
 
+  const loadNotifications = useCallback(async () => {
+    if (!mobile) return;
+    try {
+      const res = await fetch(
+        `/api/me/notifications?mobile=${encodeURIComponent(mobile)}`,
+      );
+      const json = (await res.json().catch(() => null)) as
+        | { notifications?: NotificationRow[]; error?: string }
+        | null;
+      if (!res.ok) throw new Error(json?.error || "Failed to load notifications");
+      const next = (json?.notifications ?? []) as NotificationRow[];
+      setNotifications(next);
+
+      const unread = next.find((n) => !n.readAt);
+      if (unread) {
+        setToast({ title: unread.title, message: unread.message });
+        // Mark as read so it doesn't keep popping.
+        await fetch(`/api/me/notifications/${unread.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mobile }),
+        }).catch(() => {});
+      }
+    } catch {
+      // Non-blocking
+    }
+  }, [mobile]);
+
+  async function enablePush() {
+    const supported =
+      "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+    if (!supported) {
+      setToast({
+        title: "Not supported",
+        message: "Push notifications are not supported on this device/browser.",
+      });
+      return;
+    }
+    if (!mobile) return;
+
+    const permission = await Notification.requestPermission();
+    setPushStatus(permission as any);
+    if (permission !== "granted") return;
+
+    const swReg = await navigator.serviceWorker.register("/sw.js");
+
+    const pkRes = await fetch("/api/me/push/public-key");
+    const pkJson = (await pkRes.json().catch(() => null)) as
+      | { publicKey?: string; error?: string }
+      | null;
+    if (!pkRes.ok || !pkJson?.publicKey) {
+      setToast({
+        title: "Push not configured",
+        message: pkJson?.error || "Missing VAPID keys on server.",
+      });
+      return;
+    }
+
+    const appServerKey = urlBase64ToUint8Array(pkJson.publicKey);
+    const sub =
+      (await swReg.pushManager.getSubscription()) ||
+      (await swReg.pushManager.subscribe({
+        userVisibleOnly: true,
+        appServerKey: appServerKey as any,
+      } as any));
+
+    await fetch("/api/me/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mobile,
+        subscription: sub.toJSON(),
+        userAgent: navigator.userAgent,
+      }),
+    });
+
+    setToast({ title: "Enabled", message: "Push notifications enabled." });
+  }
+
+  function urlBase64ToUint8Array(base64String: string) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
   useEffect(() => {
     if (!mobile) return;
     loadTransactions();
   }, [loadTransactions, mobile]);
+
+  useEffect(() => {
+    if (!mobile) return;
+    loadNotifications();
+    const id = window.setInterval(() => {
+      loadNotifications();
+    }, 15000);
+    return () => window.clearInterval(id);
+  }, [loadNotifications, mobile]);
 
   async function uploadScreenshot(file: File) {
     const up = new FormData();
@@ -372,6 +488,39 @@ export default function MyApplicationPage() {
           mobile ? (
             <div className="flex flex-wrap items-center justify-end gap-2">
               <span className="font-mono text-xs text-zinc-500">{mobile}</span>
+              <span className="relative inline-flex">
+                <button
+                  type="button"
+                  onClick={() => enablePush()}
+                  className="grid h-9 w-9 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:bg-zinc-50"
+                  aria-label="Enable push notifications"
+                  title={
+                    pushStatus === "granted"
+                      ? "Push enabled"
+                      : pushStatus === "denied"
+                        ? "Push blocked in browser settings"
+                        : "Enable push notifications"
+                  }
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                </button>
+                {notifications.some((n) => !n.readAt) ? (
+                  <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-600 ring-2 ring-white" />
+                ) : null}
+              </span>
               <TierPill
                 tierLabel={finance.tier.label}
                 pillClassName={finance.tier.pillClassName}
@@ -1495,6 +1644,24 @@ export default function MyApplicationPage() {
                 {depositSaving ? "Submitting…" : "Submit Deposit"}
               </button>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {toast ? (
+        <div className="fixed bottom-4 right-4 z-50 w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-emerald-200 bg-white p-4 shadow-[0_18px_50px_rgba(27,67,50,0.18)] ring-1 ring-emerald-900/[0.04]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-zinc-900">{toast.title}</p>
+              <p className="mt-1 text-sm text-zinc-600">{toast.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+            >
+              Close
+            </button>
           </div>
         </div>
       ) : null}

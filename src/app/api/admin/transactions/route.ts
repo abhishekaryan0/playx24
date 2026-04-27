@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { COOKIE_NAME, getAdminSecret, verifyAdminSession } from "@/lib/admin-session";
 import { normalizeMobile } from "@/lib/mobile";
+import { configureWebPush, getWebPushConfig, webpush } from "@/lib/web-push";
 
 export const runtime = "nodejs";
 
@@ -105,6 +106,53 @@ export async function POST(req: Request) {
     },
     select: { id: true, status: true, createdAt: true },
   });
+
+  await prisma.notification.create({
+    data: {
+      userId: user.id,
+      kind: "ADMIN_DEPOSIT_CREATED",
+      title: "Deposit added",
+      message: `Admin added a deposit of ${amount}.`,
+      data: {
+        transactionId: created.id,
+        amount,
+        status: created.status,
+      },
+    },
+    select: { id: true },
+  });
+
+  // Best-effort Web Push (works even when site is closed)
+  const cfg = getWebPushConfig();
+  if (cfg) {
+    configureWebPush(cfg);
+    const subs = await prisma.pushSubscription.findMany({
+      where: { userId: user.id },
+      select: { endpoint: true, p256dh: true, auth: true, id: true },
+    });
+
+    const payload = JSON.stringify({
+      title: "Deposit added",
+      body: `Admin added a deposit of ${amount}.`,
+      data: { url: "/my-application", transactionId: created.id },
+    });
+
+    await Promise.all(
+      subs.map(async (s) => {
+        try {
+          await webpush.sendNotification(
+            { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+            payload,
+          );
+        } catch (e: any) {
+          const code = e?.statusCode;
+          if (code === 404 || code === 410) {
+            await prisma.pushSubscription.delete({ where: { endpoint: s.endpoint } });
+          }
+        }
+      }),
+    );
+  }
 
   return NextResponse.json({ transaction: created }, { status: 201 });
 }

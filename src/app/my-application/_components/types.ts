@@ -58,3 +58,13 @@ export type TransactionRow = {
 
 export type DashboardTab = "depositRequest" | "payRecord" | "statement" | "profile";
 
+export type NotificationRow = {
+  id: string;
+  title: string;
+  message: string;
+  kind: string | null;
+  data: any;
+  readAt: string | null;
+  createdAt: string;
+};
+
