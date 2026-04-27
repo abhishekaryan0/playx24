@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AdminHeader } from "@/app/admin/_components/AdminHeader";
 import { applicationTypeLabel } from "@/lib/application-type";
 import { resolvePublicUploadUrl } from "@/lib/upload-url";
@@ -120,6 +121,7 @@ function MediaBlock({ url, label }: { url: string | null | undefined; label: str
 }
 
 export default function MyApplicationPage() {
+  const router = useRouter();
   const storageKey = useMemo(() => "play24x:auth:mobile", []);
   const [mobile, setMobile] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -160,6 +162,24 @@ export default function MyApplicationPage() {
     const m = window.localStorage.getItem(storageKey) ?? "";
     setMobile(m);
   }, [storageKey]);
+
+  useEffect(() => {
+    function syncTabFromUrl() {
+      const sp = new URLSearchParams(window.location.search);
+      const next = sp.get("tab");
+      if (
+        next === "depositRequest" ||
+        next === "payRecord" ||
+        next === "statement" ||
+        next === "profile"
+      ) {
+        setTab(next);
+      }
+    }
+    syncTabFromUrl();
+    window.addEventListener("popstate", syncTabFromUrl);
+    return () => window.removeEventListener("popstate", syncTabFromUrl);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -534,7 +554,13 @@ export default function MyApplicationPage() {
               <span className="relative inline-flex">
                 <button
                   type="button"
-                  onClick={() => enablePush()}
+                  onClick={() => {
+                    if (pushStatus === "granted") {
+                      router.push("/my-application/notifications");
+                      return;
+                    }
+                    enablePush();
+                  }}
                   className="grid h-9 w-9 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:bg-zinc-50"
                   aria-label="Enable push notifications"
                   title={

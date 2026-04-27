@@ -19,7 +19,9 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || "/my-application";
+  const url =
+    (event.notification.data && event.notification.data.url) ||
+    "/my-application?tab=depositRequest";
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })

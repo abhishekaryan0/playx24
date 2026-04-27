@@ -134,7 +134,7 @@ export async function POST(req: Request) {
     const payload = JSON.stringify({
       title: "Deposit added",
       body: `Admin added a deposit of ${amount}.`,
-      data: { url: "/my-application", transactionId: created.id },
+      data: { url: "/my-application?tab=depositRequest", transactionId: created.id },
     });
 
     await Promise.all(
