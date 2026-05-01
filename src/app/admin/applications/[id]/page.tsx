@@ -594,7 +594,9 @@ export default function AdminApplicationViewPage() {
     setTxLoading(true);
     setTxError(null);
     try {
-      const res = await fetch("/api/admin/transactions");
+      const res = await fetch(
+        `/api/admin/transactions?mobile=${encodeURIComponent(txMobile)}`,
+      );
       if (res.status === 401) {
         setSessionOk(false);
         return;
@@ -603,13 +605,7 @@ export default function AdminApplicationViewPage() {
         | { transactions?: TransactionRow[]; error?: string }
         | null;
       if (!res.ok) throw new Error(json?.error || "Failed to load transactions");
-      const all = (json?.transactions ?? []) as TransactionRow[];
-      const normalized = txMobile.replace(/\s+/g, "");
-      const filtered = all.filter((t) => {
-        const m = (t.user?.mobile ?? "").replace(/\s+/g, "");
-        return m && normalized && m.includes(normalized);
-      });
-      setTx(filtered);
+      setTx(((json?.transactions ?? []) as TransactionRow[]) ?? []);
     } catch (e: unknown) {
       setTxError(e instanceof Error ? e.message : "Failed to load transactions");
     } finally {

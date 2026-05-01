@@ -31,9 +31,10 @@ export async function GET(req: Request) {
   }
 
   const transactions = await prisma.transaction.findMany({
-    where: { userId: user.id },
+    // Customer should only see APPROVED transactions
+    where: { userId: user.id, status: "APPROVED" },
     orderBy: { createdAt: "desc" },
-    take: 50,
+    take: 200,
   });
 
   return NextResponse.json({ transactions });

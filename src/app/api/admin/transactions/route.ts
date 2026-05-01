@@ -14,14 +14,25 @@ async function requireAdmin(): Promise<boolean> {
   return Boolean(token && verifyAdminSession(token, secret));
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   if (!(await requireAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const url = new URL(req.url);
+  const mobile = normalizeMobile(url.searchParams.get("mobile") ?? "");
+
+  const user = mobile
+    ? await prisma.user.findUnique({ where: { mobile }, select: { id: true } })
+    : null;
+
   const transactions = await prisma.transaction.findMany({
+    where: {
+      status: "APPROVED",
+      ...(user?.id ? { userId: user.id } : {}),
+    },
     orderBy: { createdAt: "desc" },
-    take: 100,
+    take: 500,
     include: { user: { select: { mobile: true } } },
   });
 
