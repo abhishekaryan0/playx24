@@ -211,8 +211,8 @@ export function TierPill({
       {tooltipImageSrc ? (
         <div
           className={[
-            "pointer-events-none absolute left-1/2 top-full z-50 hidden w-[min(520px,90vw)] -translate-x-1/2 pt-3",
-            open ? "block" : "",
+            "pointer-events-none absolute left-1/2 top-full z-50 w-[min(520px,90vw)] -translate-x-1/2 pt-3",
+            open ? "block" : "hidden",
           ].join(" ")}
         >
           <div className="overflow-hidden rounded-2xl border border-emerald-900/10 bg-white shadow-[0_18px_50px_rgba(27,67,50,0.18)] ring-1 ring-emerald-900/[0.04]">
