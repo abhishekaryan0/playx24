@@ -54,7 +54,10 @@ function EyeIcon({ className }: { className?: string }) {
 
 function txDisplayId(tx: TxRow): string {
   const t = (tx.transactionNo ?? "").trim();
-  return t || tx.id;
+  if (t) return t;
+  const id = (tx.id ?? "").trim();
+  if (id.length <= 10) return id;
+  return `${id.slice(0, 6)}…${id.slice(-4)}`;
 }
 
 export default function AdminCommissionPage() {

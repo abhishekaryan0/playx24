@@ -4,6 +4,19 @@ import { normalizeMobile } from "@/lib/mobile";
 
 export const runtime = "nodejs";
 
+function generateWithdrawTransactionNo(): string {
+  // Human-friendly transaction id for withdraw requests (unique enough for UI)
+  // Example: TxnW-20260501-48231
+  const d = new Date();
+  const yyyy = String(d.getFullYear());
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const digits = Math.floor(Math.random() * 100000)
+    .toString()
+    .padStart(5, "0");
+  return `TxnW-${yyyy}${mm}${dd}-${digits}`;
+}
+
 type SubmitBody = {
   mobile?: string;
   kind?: "USER_DEPOSIT" | "USER_WITHDRAW";
@@ -110,7 +123,12 @@ export async function POST(req: Request) {
       bankName: kind === "USER_DEPOSIT" ? bankName || null : null,
       walletProvider: walletProvider || null,
       walletId: walletId || null,
-      transactionNo: kind === "USER_DEPOSIT" ? transactionNo : null,
+      transactionNo:
+        kind === "USER_DEPOSIT"
+          ? transactionNo
+          : kind === "USER_WITHDRAW"
+            ? generateWithdrawTransactionNo()
+            : null,
       screenshotUrl: kind === "USER_DEPOSIT" ? screenshotUrl || null : null,
       note: note || null,
     },

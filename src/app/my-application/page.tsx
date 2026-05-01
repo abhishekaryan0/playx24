@@ -1065,7 +1065,10 @@ export default function MyApplicationPage() {
                               {t.amount ? t.amount.toLocaleString() : "—"}
                             </td>
                             <td className="px-5 py-4 font-mono text-xs text-zinc-800">
-                              {t.transactionNo ?? t.id}
+                              {t.transactionNo ??
+                                (t.id.length <= 10
+                                  ? t.id
+                                  : `${t.id.slice(0, 6)}…${t.id.slice(-4)}`)}
                             </td>
                             <td className="px-5 py-4">
                               <TxStatusBadge status={t.status} />
