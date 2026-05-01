@@ -1432,6 +1432,11 @@ export default function MyApplicationPage() {
                   setDepositScreenshotUrl("");
                   setDepositScreenshotName("");
                   await loadTransactions();
+                  setToast({
+                    title: "Submitted",
+                    message: "Your deposit request has been submitted.",
+                  });
+                  setTab("payRecord");
                 } catch (err: unknown) {
                   const msg =
                     isRecord(err) && typeof err.message === "string"

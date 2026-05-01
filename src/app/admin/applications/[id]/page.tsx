@@ -410,6 +410,7 @@ export default function AdminApplicationViewPage() {
   const [app, setApp] = useState<ApplicationDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState<{ title: string; message: string } | null>(null);
   const [tab, setTab] = useState<
     "depositRequest" | "addPayment" | "profile" | "finance" | "statement"
   >("profile");
@@ -1492,6 +1493,10 @@ export default function AdminApplicationViewPage() {
                   setPaymentScreenshotName("");
                   await loadTransactions();
                   setTab("depositRequest");
+                  setToast({
+                    title: "Submitted",
+                    message: "Payment has been submitted.",
+                  });
                 } catch (err: unknown) {
                   const msg = err instanceof Error ? err.message : "Submit failed";
                   setPaymentMessage(msg);
@@ -1760,6 +1765,24 @@ export default function AdminApplicationViewPage() {
                 {paymentSaving ? "Submitting…" : "Submit Deposit"}
               </button>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {toast ? (
+        <div className="fixed bottom-4 right-4 z-50 w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-emerald-200 bg-white p-4 shadow-[0_18px_50px_rgba(27,67,50,0.18)] ring-1 ring-emerald-900/[0.04]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-zinc-900">{toast.title}</p>
+              <p className="mt-1 text-sm text-zinc-600">{toast.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+            >
+              Close
+            </button>
           </div>
         </div>
       ) : null}

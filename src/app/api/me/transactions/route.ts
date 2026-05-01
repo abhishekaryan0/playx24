@@ -31,8 +31,8 @@ export async function GET(req: Request) {
   }
 
   const transactions = await prisma.transaction.findMany({
-    // Customer should only see APPROVED transactions
-    where: { userId: user.id, status: "APPROVED" },
+    // Return all statuses for lists (statement filters APPROVED in UI).
+    where: { userId: user.id },
     orderBy: { createdAt: "desc" },
     take: 200,
   });

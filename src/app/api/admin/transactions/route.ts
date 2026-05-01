@@ -28,7 +28,6 @@ export async function GET(req: Request) {
 
   const transactions = await prisma.transaction.findMany({
     where: {
-      status: "APPROVED",
       ...(user?.id ? { userId: user.id } : {}),
     },
     orderBy: { createdAt: "desc" },
