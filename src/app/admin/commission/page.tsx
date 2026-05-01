@@ -12,6 +12,7 @@ type TxRow = {
   walletProvider: string | null;
   walletId: string | null;
   note: string | null;
+  transactionNo: string | null;
   createdAt: string;
   updatedAt: string;
   user: { mobile: string } | null;
@@ -29,6 +30,31 @@ function TxStatusBadge({ status }: { status: TxRow["status"] }) {
       {status}
     </span>
   );
+}
+
+function EyeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function txDisplayId(tx: TxRow): string {
+  const t = (tx.transactionNo ?? "").trim();
+  return t || tx.id;
 }
 
 export default function AdminCommissionPage() {
@@ -113,22 +139,21 @@ export default function AdminCommissionPage() {
 
         <div className="overflow-hidden rounded-2xl border border-emerald-900/10 bg-white shadow-[0_8px_32px_rgba(27,67,50,0.08)] ring-1 ring-emerald-900/[0.04]">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
+            <table className="w-full min-w-[980px] text-left text-sm">
               <thead>
                 <tr className="border-b border-emerald-900/10 bg-[#1b4332]/[0.06] text-xs font-semibold uppercase tracking-wide text-[#1b4332]">
-                  <th className="px-5 py-4">User mobile</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Wallet</th>
-                  <th className="px-5 py-4">Wallet ID</th>
+                  <th className="px-5 py-4">Date</th>
+                  <th className="px-5 py-4">Description</th>
                   <th className="px-5 py-4 text-right">Amount</th>
-                  <th className="px-5 py-4">Created</th>
+                  <th className="px-5 py-4">Transaction ID</th>
+                  <th className="px-5 py-4">Status</th>
                   <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
                 {loading && rows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-16 text-center text-zinc-500">
+                    <td colSpan={6} className="px-5 py-16 text-center text-zinc-500">
                       <span className="inline-flex items-center gap-2">
                         <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-700" />
                         Loading…
@@ -137,7 +162,7 @@ export default function AdminCommissionPage() {
                   </tr>
                 ) : rows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-16 text-center text-zinc-500">
+                    <td colSpan={6} className="px-5 py-16 text-center text-zinc-500">
                       No withdraw requests yet.
                     </td>
                   </tr>
@@ -146,32 +171,33 @@ export default function AdminCommissionPage() {
                     const busy = actionId === r.id;
                     return (
                       <tr key={r.id} className="transition hover:bg-emerald-50/40">
-                        <td className="px-5 py-4 font-mono text-xs text-zinc-800">
-                          {r.user?.mobile ?? "—"}
-                        </td>
-                        <td className="px-5 py-4">
-                          <TxStatusBadge status={r.status} />
+                        <td className="px-5 py-4 text-xs text-zinc-700">
+                          {new Date(r.createdAt).toLocaleString()}
                         </td>
                         <td className="px-5 py-4 text-xs text-zinc-700">
-                          {r.walletProvider ?? "—"}
-                        </td>
-                        <td className="px-5 py-4 font-mono text-xs text-zinc-800">
-                          {r.walletId ?? "—"}
+                          Commission withdraw
+                          <span className="ml-2 text-[11px] text-zinc-400">
+                            {r.user?.mobile ? `(${r.user.mobile})` : ""}
+                          </span>
                         </td>
                         <td className="px-5 py-4 text-right text-xs font-semibold text-zinc-800">
                           {r.amount ? r.amount.toLocaleString() : "—"}
                         </td>
-                        <td className="px-5 py-4 text-xs text-zinc-500">
-                          {new Date(r.createdAt).toLocaleString()}
+                        <td className="px-5 py-4 font-mono text-xs text-zinc-800">
+                          {txDisplayId(r)}
+                        </td>
+                        <td className="px-5 py-4">
+                          <TxStatusBadge status={r.status} />
                         </td>
                         <td className="px-5 py-4 text-right">
                           <div className="flex flex-wrap items-center justify-end gap-2">
                             <button
                               type="button"
                               onClick={() => setOpenId(r.id)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-[#1b4332] shadow-sm transition hover:bg-emerald-50"
+                              className="inline-flex h-8 w-10 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-700 shadow-sm transition hover:bg-emerald-50"
+                              aria-label="View"
                             >
-                              View
+                              <EyeIcon />
                             </button>
                             {r.status === "PENDING" ? (
                               <>
@@ -277,41 +303,41 @@ export default function AdminCommissionPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setOpenId(null)}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-zinc-200 bg-white text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
-                >
-                  Close
-                </button>
-                {openTx.status === "PENDING" ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      disabled={actionId === openTx.id}
-                      onClick={() => setStatus(openTx.id, "APPROVED")}
-                      className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-emerald-600 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      disabled={actionId === openTx.id}
-                      onClick={() => setStatus(openTx.id, "DECLINED")}
-                      className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-red-200 bg-white text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-                    >
-                      Decline
-                    </button>
-                  </div>
-                ) : (
-                  <div className="col-span-1 flex items-center justify-end">
-                    <span className="text-xs text-zinc-500">
-                      Status: <b className="text-zinc-700">{openTx.status}</b>
-                    </span>
-                  </div>
-                )}
-              </div>
+              {openTx.status === "PENDING" ? (
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    type="button"
+                    disabled={actionId === openTx.id}
+                    onClick={() => setStatus(openTx.id, "APPROVED")}
+                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-emerald-600 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    <span aria-hidden="true">✓</span>
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionId === openTx.id}
+                    onClick={() => setStatus(openTx.id, "DECLINED")}
+                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                  >
+                    <span aria-hidden="true">×</span>
+                    Decline
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3 pt-2">
+                  <span className="text-xs text-zinc-500">
+                    Status: <b className="text-zinc-700">{openTx.status}</b>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(null)}
+                    className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

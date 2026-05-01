@@ -161,8 +161,10 @@ export default function MyApplicationPage() {
   const [withdrawNote, setWithdrawNote] = useState("");
 
   const [tab, setTab] = useState<
-    "depositRequest" | "payRecord" | "statement" | "profile"
+    "depositRequest" | "payRecord" | "commissionRecord" | "statement" | "profile"
   >("profile");
+
+  const [commissionOpenId, setCommissionOpenId] = useState<string | null>(null);
 
   const [statementQuery, setStatementQuery] = useState("");
   const [statementDate, setStatementDate] = useState("");
@@ -179,6 +181,7 @@ export default function MyApplicationPage() {
       if (
         next === "depositRequest" ||
         next === "payRecord" ||
+        next === "commissionRecord" ||
         next === "statement" ||
         next === "profile"
       ) {
@@ -458,6 +461,16 @@ export default function MyApplicationPage() {
     [tx],
   );
 
+  const commissionRecords = useMemo(
+    () => tx.filter((t) => t.type === "USER_WITHDRAW"),
+    [tx],
+  );
+
+  const openCommissionTx = useMemo(
+    () => (commissionOpenId ? tx.find((t) => t.id === commissionOpenId) ?? null : null),
+    [commissionOpenId, tx],
+  );
+
   const statementRows = useMemo(
     () => filteredTx.filter((t) => t.status === "APPROVED"),
     [filteredTx],
@@ -546,6 +559,26 @@ export default function MyApplicationPage() {
     } catch (e: unknown) {
       setTxError(isRecord(e) && typeof e.message === "string" ? e.message : "Update failed");
     }
+  }
+
+  function EyeIcon({ className }: { className?: string }) {
+    return (
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+        aria-hidden="true"
+      >
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    );
   }
 
   return (
@@ -660,6 +693,28 @@ export default function MyApplicationPage() {
                 }
               >
                 Pay Record
+              </DashTab>
+              <DashTab
+                active={tab === "commissionRecord"}
+                onClick={() => setTab("commissionRecord")}
+                icon={
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 2v20" />
+                    <path d="M17 7H9.5a3.5 3.5 0 0 0 0 7H14a3 3 0 0 1 0 6H6" />
+                  </svg>
+                }
+              >
+                Commission Record
               </DashTab>
               <DashTab
                 active={tab === "statement"}
@@ -950,6 +1005,80 @@ export default function MyApplicationPage() {
                             </td>
                             <td className="px-4 py-3 text-xs text-zinc-500">
                               {new Date(t.createdAt).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Section>
+            ) : null}
+
+            {tab === "commissionRecord" ? (
+              <Section title="Commission record">
+                <p className="text-sm text-zinc-600">
+                  Your withdraw requests (pending/approved/declined).
+                </p>
+
+                {txError ? (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    {txError}
+                  </div>
+                ) : null}
+
+                <div className="overflow-x-auto rounded-xl border border-emerald-900/10">
+                  <table className="w-full min-w-[980px] text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-emerald-900/10 bg-[#1b4332]/[0.06] text-xs font-semibold uppercase tracking-wide text-[#1b4332]">
+                        <th className="px-5 py-4">Date</th>
+                        <th className="px-5 py-4">Description</th>
+                        <th className="px-5 py-4 text-right">Amount</th>
+                        <th className="px-5 py-4">Transaction ID</th>
+                        <th className="px-5 py-4">Status</th>
+                        <th className="px-5 py-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100">
+                      {txLoading ? (
+                        <tr>
+                          <td colSpan={6} className="px-5 py-14 text-center text-zinc-500">
+                            Loading…
+                          </td>
+                        </tr>
+                      ) : commissionRecords.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-5 py-14 text-center text-zinc-500">
+                            No commission records yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        commissionRecords.map((t) => (
+                          <tr key={t.id} className="hover:bg-emerald-50/40">
+                            <td className="px-5 py-4 text-xs text-zinc-700">
+                              {new Date(t.createdAt).toLocaleString()}
+                            </td>
+                            <td className="px-5 py-4 text-xs text-zinc-700">
+                              Commission withdraw
+                            </td>
+                            <td className="px-5 py-4 text-right text-xs font-semibold text-zinc-800">
+                              {t.amount ? t.amount.toLocaleString() : "—"}
+                            </td>
+                            <td className="px-5 py-4 font-mono text-xs text-zinc-800">
+                              {t.transactionNo ?? t.id}
+                            </td>
+                            <td className="px-5 py-4">
+                              <TxStatusBadge status={t.status} />
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => setCommissionOpenId(t.id)}
+                                className="inline-flex h-8 w-10 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-700 shadow-sm transition hover:bg-emerald-50"
+                                aria-label="View"
+                              >
+                                <EyeIcon />
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -1945,6 +2074,87 @@ export default function MyApplicationPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {openCommissionTx ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-0 sm:place-items-center sm:p-6"
+          onClick={() => setCommissionOpenId(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-t-2xl border border-zinc-200 border-b-0 bg-white shadow-2xl sm:rounded-2xl sm:border-b"
+            onClick={(e) => e.stopPropagation()}
+            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))" }}
+          >
+            <div className="border-b border-zinc-100 px-5 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                Withdraw request
+              </p>
+            </div>
+
+            <div className="space-y-4 px-5 py-5">
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Wallet
+                </label>
+                <input
+                  disabled
+                  value={openCommissionTx.walletProvider ?? ""}
+                  readOnly
+                  className="min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none disabled:cursor-not-allowed"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Wallet ID
+                </label>
+                <input
+                  disabled
+                  value={openCommissionTx.walletId ?? ""}
+                  readOnly
+                  className="min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none disabled:cursor-not-allowed"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Amount
+                </label>
+                <input
+                  disabled
+                  value={openCommissionTx.amount ? String(openCommissionTx.amount) : ""}
+                  readOnly
+                  className="min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none disabled:cursor-not-allowed"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Remarks
+                </label>
+                <input
+                  disabled
+                  value={openCommissionTx.note ?? ""}
+                  readOnly
+                  className="min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none disabled:cursor-not-allowed"
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <span className="text-xs text-zinc-500">
+                  Status: <b className="text-zinc-700">{openCommissionTx.status}</b>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCommissionOpenId(null)}
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       ) : null}

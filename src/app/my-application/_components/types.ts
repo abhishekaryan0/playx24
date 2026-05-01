@@ -57,7 +57,12 @@ export type TransactionRow = {
   adminId: string | null;
 };
 
-export type DashboardTab = "depositRequest" | "payRecord" | "statement" | "profile";
+export type DashboardTab =
+  | "depositRequest"
+  | "payRecord"
+  | "commissionRecord"
+  | "statement"
+  | "profile";
 
 export type NotificationRow = {
   id: string;
