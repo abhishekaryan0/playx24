@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TransactionRow } from "./types";
 
 export function Section({
@@ -151,9 +151,26 @@ export function TierPill({
   tooltipImageSrc?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const anchorRef = useRef<HTMLSpanElement | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const el = anchorRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const gap = 10;
+    const maxW = 520;
+    const viewportW = window.innerWidth;
+    const left = Math.max(8, Math.min(viewportW - maxW - 8, rect.left));
+    const top = rect.bottom + gap;
+    setPos({ top, left });
+  }, [open]);
+
   return (
     <span className="relative inline-flex">
       <span
+        ref={anchorRef}
         tabIndex={tooltipImageSrc ? 0 : undefined}
         role={tooltipImageSrc ? "button" : undefined}
         aria-haspopup={tooltipImageSrc ? "dialog" : undefined}
@@ -209,21 +226,37 @@ export function TierPill({
       </span>
 
       {tooltipImageSrc && open ? (
-        <div
-          role="dialog"
-          aria-modal="false"
-          className="fixed inset-0 z-[100] flex items-start justify-center p-4 sm:items-center"
-          onClick={() => setOpen(false)}
-        >
-          {/* Image only (no frame, no dark bg) */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={tooltipImageSrc}
-            alt="Commission tier chart"
-            className="max-h-[85vh] w-auto max-w-[min(980px,95vw)]"
-            onClick={(e) => e.stopPropagation()}
+        <>
+          {/* Click-away layer (no dark background) */}
+          <button
+            type="button"
+            aria-label="Close"
+            className="fixed inset-0 z-[100] cursor-default bg-transparent"
+            onClick={() => setOpen(false)}
           />
-        </div>
+
+          {/* Popover (anchored near the pill) */}
+          <div
+            role="dialog"
+            aria-modal="false"
+            className="fixed z-[101]"
+            style={{
+              top: pos?.top ?? 0,
+              left: pos?.left ?? 0,
+              width: "min(520px, calc(100vw - 16px))",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={tooltipImageSrc}
+              alt="Commission tier chart"
+              className="block h-auto w-full"
+              style={{
+                imageRendering: "auto",
+              }}
+            />
+          </div>
+        </>
       ) : null}
     </span>
   );
