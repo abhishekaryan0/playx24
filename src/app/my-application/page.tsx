@@ -635,6 +635,7 @@ export default function MyApplicationPage() {
                 tierLabel={finance.tier.label}
                 pillClassName={finance.tier.pillClassName}
                 iconClassName={finance.tier.iconClassName}
+                tooltipImageSrc="/images/commission-tier-chart.png"
               />
               {appStatus ? <StatusPill status={appStatus} /> : null}
             </div>

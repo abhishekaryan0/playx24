@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { TransactionRow } from "./types";
 
 export function Section({
@@ -142,39 +143,88 @@ export function TierPill({
   tierLabel,
   pillClassName,
   iconClassName,
+  tooltipImageSrc,
 }: {
   tierLabel: string;
   pillClassName: string;
   iconClassName: string;
+  tooltipImageSrc?: string;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <span
-      className={[
-        "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold shadow-sm",
-        pillClassName,
-      ].join(" ")}
-    >
+    <span className="group relative inline-flex">
       <span
+        tabIndex={tooltipImageSrc ? 0 : undefined}
+        role={tooltipImageSrc ? "button" : undefined}
+        aria-haspopup={tooltipImageSrc ? "dialog" : undefined}
+        aria-expanded={tooltipImageSrc ? open : undefined}
+        onClick={
+          tooltipImageSrc
+            ? () => {
+                setOpen((v) => !v);
+              }
+            : undefined
+        }
+        onKeyDown={
+          tooltipImageSrc
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setOpen((v) => !v);
+                }
+                if (e.key === "Escape") {
+                  setOpen(false);
+                }
+              }
+            : undefined
+        }
         className={[
-          "grid h-6 w-6 place-items-center rounded-full ring-1 ring-black/5",
-          iconClassName,
+          "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold shadow-sm outline-none",
+          tooltipImageSrc ? "cursor-help focus:ring-2 focus:ring-emerald-600/30" : "",
+          pillClassName,
         ].join(" ")}
-        aria-hidden="true"
+        title={tooltipImageSrc ? "Click to view tier chart" : undefined}
       >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        <span
+          className={[
+            "grid h-6 w-6 place-items-center rounded-full ring-1 ring-black/5",
+            iconClassName,
+          ].join(" ")}
+          aria-hidden="true"
         >
-          <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7Z" />
-        </svg>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7Z" />
+          </svg>
+        </span>
+        <span className="whitespace-nowrap">{tierLabel}</span>
       </span>
-      <span className="whitespace-nowrap">{tierLabel}</span>
+
+      {tooltipImageSrc ? (
+        <div
+          className={[
+            "pointer-events-none absolute left-1/2 top-full z-50 hidden w-[min(520px,90vw)] -translate-x-1/2 pt-3",
+            open ? "block" : "",
+          ].join(" ")}
+        >
+          <div className="overflow-hidden rounded-2xl border border-emerald-900/10 bg-white shadow-[0_18px_50px_rgba(27,67,50,0.18)] ring-1 ring-emerald-900/[0.04]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={tooltipImageSrc}
+              alt="Commission tier chart"
+              className="block h-auto w-full"
+            />
+          </div>
+        </div>
+      ) : null}
     </span>
   );
 }
