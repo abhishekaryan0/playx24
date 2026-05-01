@@ -291,6 +291,12 @@ export default function AdminPage() {
               <IconRefresh className="text-emerald-700" />
               Refresh
             </button>
+            <Link
+              href="/admin/commission"
+              className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3.5 py-2 text-sm font-semibold text-[#1b4332] shadow-sm transition hover:bg-emerald-50"
+            >
+              Commission record
+            </Link>
             <button
               type="button"
               onClick={() => logout()}

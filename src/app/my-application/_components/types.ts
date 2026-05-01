@@ -42,7 +42,7 @@ export type ApiResponse = {
 
 export type TransactionRow = {
   id: string;
-  type: "ADMIN_DEPOSIT" | "USER_DEPOSIT";
+  type: "ADMIN_DEPOSIT" | "USER_DEPOSIT" | "USER_WITHDRAW";
   status: "PENDING" | "APPROVED" | "DECLINED";
   amount: number | null;
   method: string | null;
@@ -51,6 +51,7 @@ export type TransactionRow = {
   walletId: string | null;
   transactionNo: string | null;
   screenshotUrl: string | null;
+  note?: string | null;
   createdAt: string;
   updatedAt: string;
   adminId: string | null;

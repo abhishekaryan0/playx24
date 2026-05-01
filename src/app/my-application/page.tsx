@@ -151,6 +151,15 @@ export default function MyApplicationPage() {
   const [depositScreenshotUrl, setDepositScreenshotUrl] = useState<string>("");
   const [depositScreenshotName, setDepositScreenshotName] = useState<string>("");
 
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawSaving, setWithdrawSaving] = useState(false);
+  const [withdrawMessage, setWithdrawMessage] = useState<string | null>(null);
+  const [withdrawErrors, setWithdrawErrors] = useState<Record<string, string>>({});
+  const [withdrawWalletProvider, setWithdrawWalletProvider] = useState("");
+  const [withdrawWalletId, setWithdrawWalletId] = useState("");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawNote, setWithdrawNote] = useState("");
+
   const [tab, setTab] = useState<
     "depositRequest" | "payRecord" | "statement" | "profile"
   >("profile");
@@ -459,9 +468,8 @@ export default function MyApplicationPage() {
     let totalOut = 0;
     for (const t of statementRows) {
       const amt = typeof t.amount === "number" && Number.isFinite(t.amount) ? t.amount : 0;
-      // For now we treat both ADMIN_DEPOSIT and USER_DEPOSIT as deposits (money coming in).
-      // When you add withdrawals later, we’ll put them into Total OUT.
-      totalIn += amt;
+      if (t.type === "USER_WITHDRAW") totalOut += amt;
+      else totalIn += amt;
     }
     const balance = totalIn - totalOut;
     return { totalIn, totalOut, balance };
@@ -473,7 +481,7 @@ export default function MyApplicationPage() {
       .filter((t) => t.type === "USER_DEPOSIT")
       .reduce((sum, t) => sum + (t.amount ?? 0), 0);
     const cashOut = approved
-      .filter((t) => t.type === "ADMIN_DEPOSIT")
+      .filter((t) => t.type === "ADMIN_DEPOSIT" || t.type === "USER_WITHDRAW")
       .reduce((sum, t) => sum + (t.amount ?? 0), 0);
     const balance = cashIn - cashOut;
     const tier = getCommissionTier(cashIn);
@@ -518,7 +526,7 @@ export default function MyApplicationPage() {
     let running = 0;
     return sorted.map((t) => {
       const amt = typeof t.amount === "number" && Number.isFinite(t.amount) ? t.amount : 0;
-      const withdrawal = t.type === "ADMIN_DEPOSIT" ? amt : 0;
+      const withdrawal = t.type === "USER_WITHDRAW" ? amt : 0;
       const deposit = t.type === "USER_DEPOSIT" ? amt : 0;
       running += deposit - withdrawal;
       return { t, withdrawal, deposit, running };
@@ -1337,6 +1345,26 @@ export default function MyApplicationPage() {
                     helper="(Average Confirmation Time)"
                     value={formatAct(finance.actSeconds)}
                   />
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWithdrawMessage(null);
+                        setWithdrawErrors({});
+                        const wProvider = application.walletDetails?.provider ?? "";
+                        const wId = application.walletDetails?.walletId ?? "";
+                        setWithdrawWalletProvider(wProvider);
+                        setWithdrawWalletId(wId);
+                        setWithdrawAmount(String(Math.max(0, finance.commission)));
+                        setWithdrawNote("");
+                        setWithdrawOpen(true);
+                      }}
+                      className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-emerald-700 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+                    >
+                      Withdraw
+                    </button>
+                  </div>
                 </Section>
                 <Section title="Status">
                   <div className="flex items-center justify-between gap-3">
@@ -1717,6 +1745,205 @@ export default function MyApplicationPage() {
               >
                 {depositSaving ? "Submitting…" : "Submit Deposit"}
               </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {withdrawOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-0 sm:place-items-center sm:p-6"
+          onClick={() => setWithdrawOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-t-2xl border border-zinc-200 border-b-0 bg-white shadow-2xl sm:rounded-2xl sm:border-b"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))",
+            }}
+          >
+            <div className="border-b border-zinc-100 px-5 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                Withdraw request
+              </p>
+            </div>
+
+            <form
+              className="max-h-[78vh] overflow-auto space-y-4 px-5 py-5"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setWithdrawMessage(null);
+                setWithdrawErrors({});
+                setWithdrawSaving(true);
+                try {
+                  const amount = Number(withdrawAmount);
+                  const res = await fetch("/api/me/transactions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      mobile,
+                      kind: "USER_WITHDRAW",
+                      amount,
+                      walletProvider: withdrawWalletProvider,
+                      walletId: withdrawWalletId,
+                      note: withdrawNote,
+                    }),
+                  });
+                  const json = (await res.json().catch(() => null)) as
+                    | {
+                        transaction?: { id: string };
+                        fieldErrors?: Record<string, string>;
+                        error?: string;
+                      }
+                    | null;
+                  if (!res.ok) {
+                    setWithdrawErrors(json?.fieldErrors ?? {});
+                    throw new Error(json?.error || "Submit failed");
+                  }
+
+                  setWithdrawOpen(false);
+                  await loadTransactions();
+                  setToast({
+                    title: "Requested",
+                    message: "Your withdraw request has been submitted.",
+                  });
+                } catch (err: unknown) {
+                  const msg =
+                    isRecord(err) && typeof err.message === "string"
+                      ? err.message
+                      : "Submit failed";
+                  setWithdrawMessage(msg);
+                } finally {
+                  setWithdrawSaving(false);
+                }
+              }}
+            >
+              {withdrawMessage ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                  {withdrawMessage}
+                </div>
+              ) : null}
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Total commission
+                </label>
+                <input
+                  disabled
+                  value={finance.commission.toLocaleString()}
+                  readOnly
+                  className="min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none disabled:cursor-not-allowed"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Ready to withdraw
+                </label>
+                <input
+                  disabled
+                  value={Math.max(0, finance.commission).toLocaleString()}
+                  readOnly
+                  className="min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none disabled:cursor-not-allowed"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Wallet
+                </label>
+                <div className="relative">
+                  <select
+                    value={withdrawWalletProvider}
+                    onChange={(e) => setWithdrawWalletProvider(e.target.value)}
+                    className={[
+                      "min-h-11 w-full appearance-none rounded-lg border bg-white px-3 pr-10 text-sm text-zinc-700 outline-none",
+                      withdrawErrors.walletProvider ? "border-red-300" : "border-zinc-200",
+                    ].join(" ")}
+                  >
+                    <option value="">Select your wallet</option>
+                    <option value="Nagad">Nagad</option>
+                    <option value="bKash">bKash</option>
+                    <option value="Rocket">Rocket</option>
+                    <option value="uPay">uPay</option>
+                    <option value="SureCash">SureCash</option>
+                    <option value="Tap">Tap</option>
+                    <option value="iPay">iPay</option>
+                    <option value="Google Pay">Google Pay</option>
+                    <option value="CashBaba">CashBaba</option>
+                    <option value="OK Wallet">OK Wallet</option>
+                  </select>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M5.5 7.5l4.5 5 4.5-5H5.5z" />
+                    </svg>
+                  </span>
+                </div>
+                {withdrawErrors.walletProvider ? (
+                  <p className="text-xs text-red-600">{withdrawErrors.walletProvider}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Wallet ID
+                </label>
+                <input
+                  value={withdrawWalletId}
+                  onChange={(e) => setWithdrawWalletId(e.target.value)}
+                  placeholder="Enter wallet id"
+                  className={[
+                    "min-h-11 w-full rounded-lg border bg-white px-3 text-sm text-zinc-900 outline-none",
+                    withdrawErrors.walletId ? "border-red-300" : "border-zinc-200",
+                  ].join(" ")}
+                />
+                {withdrawErrors.walletId ? (
+                  <p className="text-xs text-red-600">{withdrawErrors.walletId}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Amount
+                </label>
+                <input
+                  inputMode="numeric"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  className={[
+                    "min-h-11 w-full rounded-lg border bg-white px-3 text-sm text-zinc-900 outline-none",
+                    withdrawErrors.amount ? "border-red-300" : "border-zinc-200",
+                  ].join(" ")}
+                />
+                {withdrawErrors.amount ? (
+                  <p className="text-xs text-red-600">{withdrawErrors.amount}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Remarks
+                </label>
+                <input
+                  value={withdrawNote}
+                  onChange={(e) => setWithdrawNote(e.target.value)}
+                  placeholder="Add a remark"
+                  className="min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  type="submit"
+                  disabled={withdrawSaving}
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-emerald-600 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {withdrawSaving ? "Submitting…" : "Withdraw Now"}
+                </button>
+              </div>
             </form>
           </div>
         </div>

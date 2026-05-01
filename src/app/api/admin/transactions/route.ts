@@ -21,6 +21,7 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const mobile = normalizeMobile(url.searchParams.get("mobile") ?? "");
+  const type = (url.searchParams.get("type") ?? "").trim().toUpperCase();
 
   const user = mobile
     ? await prisma.user.findUnique({ where: { mobile }, select: { id: true } })
@@ -29,6 +30,7 @@ export async function GET(req: Request) {
   const transactions = await prisma.transaction.findMany({
     where: {
       ...(user?.id ? { userId: user.id } : {}),
+      ...(type ? { type: type as any } : {}),
     },
     orderBy: { createdAt: "desc" },
     take: 500,

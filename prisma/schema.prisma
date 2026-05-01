@@ -14,6 +14,7 @@ enum ApplicationType {
 enum TransactionType {
   ADMIN_DEPOSIT
   USER_DEPOSIT
+  USER_WITHDRAW
 }
 
 enum TransactionStatus {

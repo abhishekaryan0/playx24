@@ -6,6 +6,7 @@ export const runtime = "nodejs";
 
 type SubmitBody = {
   mobile?: string;
+  kind?: "USER_DEPOSIT" | "USER_WITHDRAW";
   amount?: number;
   method?: string;
   bankName?: string;
@@ -13,6 +14,7 @@ type SubmitBody = {
   walletId?: string;
   transactionNo?: string;
   screenshotUrl?: string;
+  note?: string;
 };
 
 export async function GET(req: Request) {
@@ -55,12 +57,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const kind = body?.kind ?? "USER_DEPOSIT";
+
   const method = (body?.method ?? "").trim();
   const bankName = (body?.bankName ?? "").trim();
   const walletProvider = (body?.walletProvider ?? "").trim();
   const walletId = (body?.walletId ?? "").trim();
   const transactionNo = (body?.transactionNo ?? "").trim();
   const screenshotUrl = (body?.screenshotUrl ?? "").trim();
+  const note = (body?.note ?? "").trim();
   const amountRaw = body?.amount;
   const amount =
     typeof amountRaw === "number" && Number.isFinite(amountRaw)
@@ -68,17 +73,25 @@ export async function POST(req: Request) {
       : NaN;
 
   const fieldErrors: Record<string, string> = {};
-  if (!method) fieldErrors.method = "Select bank or wallet";
   if (!Number.isFinite(amount) || amount <= 0) fieldErrors.amount = "Amount is required";
-  if (method === "wallet") {
+  if (kind === "USER_DEPOSIT") {
+    if (!method) fieldErrors.method = "Select bank or wallet";
+    if (method === "wallet") {
+      if (!walletProvider) fieldErrors.walletProvider = "Select your wallet";
+      if (!walletId) fieldErrors.walletId = "Wallet ID is required";
+    }
+    if (method === "bank") {
+      if (!bankName) fieldErrors.bankName = "Bank name is required";
+    }
+    if (!transactionNo) fieldErrors.transactionNo = "Transaction number is required";
+    // Screenshot is optional for now.
+  } else if (kind === "USER_WITHDRAW") {
+    // Withdrawal request always needs wallet.
     if (!walletProvider) fieldErrors.walletProvider = "Select your wallet";
     if (!walletId) fieldErrors.walletId = "Wallet ID is required";
+  } else {
+    return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
   }
-  if (method === "bank") {
-    if (!bankName) fieldErrors.bankName = "Bank name is required";
-  }
-  if (!transactionNo) fieldErrors.transactionNo = "Transaction number is required";
-  // Screenshot is optional for now.
 
   if (Object.keys(fieldErrors).length) {
     return NextResponse.json(
@@ -90,15 +103,16 @@ export async function POST(req: Request) {
   const created = await prisma.transaction.create({
     data: {
       userId: user.id,
-      type: "USER_DEPOSIT",
+      type: kind,
       status: "PENDING",
       amount,
-      method,
-      bankName: bankName || null,
+      method: kind === "USER_DEPOSIT" ? method : "wallet",
+      bankName: kind === "USER_DEPOSIT" ? bankName || null : null,
       walletProvider: walletProvider || null,
       walletId: walletId || null,
-      transactionNo,
-      screenshotUrl: screenshotUrl || null,
+      transactionNo: kind === "USER_DEPOSIT" ? transactionNo : null,
+      screenshotUrl: kind === "USER_DEPOSIT" ? screenshotUrl || null : null,
+      note: note || null,
     },
     select: { id: true, status: true, createdAt: true },
   });
