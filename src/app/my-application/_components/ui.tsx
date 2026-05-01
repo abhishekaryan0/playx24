@@ -152,7 +152,7 @@ export function TierPill({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <span className="group relative inline-flex">
+    <span className="relative inline-flex">
       <span
         tabIndex={tooltipImageSrc ? 0 : undefined}
         role={tooltipImageSrc ? "button" : undefined}
@@ -208,21 +208,21 @@ export function TierPill({
         <span className="whitespace-nowrap">{tierLabel}</span>
       </span>
 
-      {tooltipImageSrc ? (
+      {tooltipImageSrc && open ? (
         <div
-          className={[
-            "pointer-events-none absolute left-1/2 top-full z-50 w-[min(520px,90vw)] -translate-x-1/2 pt-3",
-            open ? "block" : "hidden",
-          ].join(" ")}
+          role="dialog"
+          aria-modal="false"
+          className="fixed inset-0 z-[100] flex items-start justify-center p-4 sm:items-center"
+          onClick={() => setOpen(false)}
         >
-          <div className="overflow-hidden rounded-2xl border border-emerald-900/10 bg-white shadow-[0_18px_50px_rgba(27,67,50,0.18)] ring-1 ring-emerald-900/[0.04]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={tooltipImageSrc}
-              alt="Commission tier chart"
-              className="block h-auto w-full"
-            />
-          </div>
+          {/* Image only (no frame, no dark bg) */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={tooltipImageSrc}
+            alt="Commission tier chart"
+            className="max-h-[85vh] w-auto max-w-[min(980px,95vw)]"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       ) : null}
     </span>
