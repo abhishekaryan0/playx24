@@ -150,12 +150,13 @@ export function TierPill({
   iconClassName: string;
   tooltipImageSrc?: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [pinned, setPinned] = useState(false);
   const anchorRef = useRef<HTMLSpanElement | null>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!(hovered || pinned)) return;
     const el = anchorRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -165,7 +166,7 @@ export function TierPill({
     const left = Math.max(8, Math.min(viewportW - maxW - 8, rect.left));
     const top = rect.bottom + gap;
     setPos({ top, left });
-  }, [open]);
+  }, [hovered, pinned]);
 
   return (
     <span className="relative inline-flex">
@@ -174,11 +175,13 @@ export function TierPill({
         tabIndex={tooltipImageSrc ? 0 : undefined}
         role={tooltipImageSrc ? "button" : undefined}
         aria-haspopup={tooltipImageSrc ? "dialog" : undefined}
-        aria-expanded={tooltipImageSrc ? open : undefined}
+        aria-expanded={tooltipImageSrc ? pinned || hovered : undefined}
+        onMouseEnter={tooltipImageSrc ? () => setHovered(true) : undefined}
+        onMouseLeave={tooltipImageSrc ? () => setHovered(false) : undefined}
         onClick={
           tooltipImageSrc
             ? () => {
-                setOpen((v) => !v);
+                setPinned((v) => !v);
               }
             : undefined
         }
@@ -187,10 +190,11 @@ export function TierPill({
             ? (e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  setOpen((v) => !v);
+                  setPinned((v) => !v);
                 }
                 if (e.key === "Escape") {
-                  setOpen(false);
+                  setPinned(false);
+                  setHovered(false);
                 }
               }
             : undefined
@@ -200,7 +204,7 @@ export function TierPill({
           tooltipImageSrc ? "cursor-help focus:ring-2 focus:ring-emerald-600/30" : "",
           pillClassName,
         ].join(" ")}
-        title={tooltipImageSrc ? "Click to view tier chart" : undefined}
+        title={tooltipImageSrc ? "Hover to view (click to pin)" : undefined}
       >
         <span
           className={[
@@ -225,15 +229,20 @@ export function TierPill({
         <span className="whitespace-nowrap">{tierLabel}</span>
       </span>
 
-      {tooltipImageSrc && open ? (
+      {tooltipImageSrc && (hovered || pinned) ? (
         <>
-          {/* Click-away layer (no dark background) */}
-          <button
-            type="button"
-            aria-label="Close"
-            className="fixed inset-0 z-[100] cursor-default bg-transparent"
-            onClick={() => setOpen(false)}
-          />
+          {/* Click-away layer (no dark background) - only when pinned */}
+          {pinned ? (
+            <button
+              type="button"
+              aria-label="Close"
+              className="fixed inset-0 z-[100] cursor-default bg-transparent"
+              onClick={() => {
+                setPinned(false);
+                setHovered(false);
+              }}
+            />
+          ) : null}
 
           {/* Popover (anchored near the pill) */}
           <div
