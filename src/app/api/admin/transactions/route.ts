@@ -138,7 +138,12 @@ export async function POST(req: Request) {
   const cfg = getWebPushConfig();
   if (cfg) {
     configureWebPush(cfg);
-    const subs = await prisma.pushSubscription.findMany({
+    const subs: Array<{
+      id: string;
+      endpoint: string;
+      p256dh: string;
+      auth: string;
+    }> = await prisma.pushSubscription.findMany({
       where: { userId: user.id },
       select: { endpoint: true, p256dh: true, auth: true, id: true },
     });
@@ -156,8 +161,11 @@ export async function POST(req: Request) {
             { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
             payload,
           );
-        } catch (e: any) {
-          const code = e?.statusCode;
+        } catch (e: unknown) {
+          const code =
+            typeof e === "object" && e && "statusCode" in e
+              ? (e as { statusCode?: unknown }).statusCode
+              : undefined;
           if (code === 404 || code === 410) {
             await prisma.pushSubscription.delete({ where: { endpoint: s.endpoint } });
           }

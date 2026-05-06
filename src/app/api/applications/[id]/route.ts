@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
@@ -64,7 +63,7 @@ export async function PATCH(
   }
 
   const isSubmitting = body.status === "PENDING";
-  const data: Prisma.ApplicationUpdateInput = {};
+  const data: any = {};
 
   if (body.status !== undefined) data.status = body.status;
   if (body.primaryInfo) {
@@ -102,17 +101,48 @@ export async function PATCH(
     // Ensure a User exists for this mobile and link application -> user.
     const mobile = normalizeMobile(mobileNumber);
 
+    const app = await prisma.application.findUnique({
+      where: { id },
+      select: { id: true, userId: true },
+    });
+    if (!app) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     const existing = await prisma.user.findUnique({
       where: { mobile },
       select: { id: true },
     });
 
+    // Mobile must be unique across applications. If this mobile already belongs to
+    // some other user/application, block and ask them to use a new number.
+    if (existing && existing.id !== app.userId) {
+      return NextResponse.json(
+        {
+          error: "Mobile already exist",
+          fieldErrors: { mobileNumber: "Mobile already exist" },
+        },
+        { status: 409 },
+      );
+    }
+
     if (!existing) {
-      const created = await prisma.user.create({
-        data: { mobile, password: "" },
-        select: { id: true },
-      });
-      data.user = { connect: { id: created.id } };
+      try {
+        const created = await prisma.user.create({
+          data: { mobile, password: "" },
+          select: { id: true },
+        });
+        data.user = { connect: { id: created.id } };
+      } catch {
+        // If two requests race, the DB unique constraint may win; surface a friendly message.
+        return NextResponse.json(
+          {
+            error: "Mobile already exist",
+            fieldErrors: { mobileNumber: "Mobile already exist" },
+          },
+          { status: 409 },
+        );
+      }
     } else {
       data.user = { connect: { id: existing.id } };
     }
@@ -181,7 +211,7 @@ export async function PATCH(
     // If this is the final submission, generate a password and return it once
     // so the user can log in with (mobile + password).
     if (isSubmitting) {
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx: any) => {
         const application = await tx.application.findUnique({
           where: { id },
           select: { id: true, userId: true, user: { select: { mobile: true } } },
