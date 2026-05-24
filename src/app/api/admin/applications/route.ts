@@ -77,7 +77,7 @@ export async function GET(req: Request) {
       skip,
       take: pageSize,
       include: {
-        user: { select: { mobile: true } },
+        user: { select: { id: true, mobile: true } },
       },
     }),
   ]);

@@ -8,6 +8,7 @@ import { isPendingReview, statusDisplayLabel } from "@/lib/application-status";
 import { AdminHeader } from "./_components/AdminHeader";
 import { IconLogout, IconRefresh } from "./_components/AdminIcons";
 import { AdminLoginShell } from "./_components/AdminLoginShell";
+import { runDeleteUserFlow } from "@/lib/admin-delete-user";
 
 type ApplicationRow = {
   id: string;
@@ -19,7 +20,7 @@ type ApplicationRow = {
   country: string | null;
   createdAt: string;
   updatedAt: string;
-  user: { mobile: string } | null;
+  user: { id: string; mobile: string } | null;
 };
 
 type ListResponse = {
@@ -42,6 +43,7 @@ export default function AdminPage() {
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [deleteUserBusy, setDeleteUserBusy] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<
     "ALL" | "APPROVED" | "REJECTED" | "PENDING" | "DRAFT"
@@ -174,6 +176,16 @@ export default function AdminPage() {
       setListError("Update failed");
     } finally {
       setActionId(null);
+    }
+  }
+
+  async function handleDeleteUser(applicationId: string, mobile: string | null) {
+    setDeleteUserBusy(true);
+    try {
+      const ok = await runDeleteUserFlow({ applicationId, mobile });
+      if (ok) await loadApplications();
+    } finally {
+      setDeleteUserBusy(false);
     }
   }
 
@@ -507,6 +519,19 @@ export default function AdminPage() {
                                 </button>
                               </>
                             ) : null}
+                            <button
+                              type="button"
+                              disabled={deleteUserBusy}
+                              onClick={() =>
+                                void handleDeleteUser(
+                                  r.id,
+                                  r.user?.mobile ?? r.mobileNumber,
+                                )
+                              }
+                              className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                            >
+                              Delete user
+                            </button>
                           </div>
                         </td>
                       </tr>
