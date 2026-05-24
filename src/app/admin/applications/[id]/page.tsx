@@ -467,6 +467,9 @@ export default function AdminApplicationViewPage() {
   const [paymentTxNo, setPaymentTxNo] = useState("");
   const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState<string>("");
   const [paymentScreenshotName, setPaymentScreenshotName] = useState<string>("");
+  const [deleteUserOpen, setDeleteUserOpen] = useState(false);
+  const [deleteUserBusy, setDeleteUserBusy] = useState(false);
+  const [deleteUserError, setDeleteUserError] = useState<string | null>(null);
 
   // Must stay above any conditional return to keep hook order stable.
   // In admin:
@@ -713,6 +716,28 @@ export default function AdminApplicationViewPage() {
       await load();
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function deleteLinkedUser() {
+    if (!app?.user) return;
+    setDeleteUserBusy(true);
+    setDeleteUserError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${app.user.id}`, { method: "DELETE" });
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(json?.error || "Delete failed");
+      setDeleteUserOpen(false);
+      setTx([]);
+      await load();
+      setToast({
+        title: "User deleted",
+        message: "The login account was removed. This application is unchanged.",
+      });
+    } catch (e: unknown) {
+      setDeleteUserError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleteUserBusy(false);
     }
   }
 
@@ -1565,6 +1590,28 @@ export default function AdminApplicationViewPage() {
                       confirm the status.
                     </p>
                   </div>
+                  {app.user ? (
+                    <div className="rounded-xl border border-red-200 bg-red-50/60 px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-red-700/80">
+                        Danger zone
+                      </p>
+                      <p className="mt-1 text-sm text-red-900/90">
+                        Permanently removes the login account ({app.user.mobile}), all
+                        transactions, and notifications. The application record stays.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={deleteUserBusy || busy}
+                        onClick={() => {
+                          setDeleteUserError(null);
+                          setDeleteUserOpen(true);
+                        }}
+                        className="mt-3 rounded-lg border border-red-300 bg-white px-3.5 py-2 text-sm font-semibold text-red-700 shadow-sm transition hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Delete user account
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </Section>
             </aside>
@@ -2013,6 +2060,62 @@ export default function AdminApplicationViewPage() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteUserOpen && app?.user ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-0 sm:place-items-center sm:p-6"
+          onClick={() => !deleteUserBusy && setDeleteUserOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-t-2xl border border-zinc-200 border-b-0 bg-white shadow-2xl sm:rounded-2xl sm:border-b"
+            onClick={(e) => e.stopPropagation()}
+            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))" }}
+          >
+            <div className="border-b border-zinc-100 px-5 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                Delete user account
+              </p>
+              <p className="mt-2 text-sm text-zinc-700">
+                Remove login for{" "}
+                <span className="font-mono font-semibold text-zinc-900">{app.user.mobile}</span>?
+                This cannot be undone.
+              </p>
+            </div>
+            <div className="space-y-4 px-5 py-5">
+              {deleteUserError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                  {deleteUserError}
+                </div>
+              ) : null}
+              <ul className="list-disc space-y-1 pl-5 text-sm text-zinc-600">
+                <li>User can no longer sign in with this mobile number.</li>
+                <li>All deposits, withdrawals, and notifications are deleted.</li>
+                <li>This application and uploaded documents are kept.</li>
+              </ul>
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  disabled={deleteUserBusy}
+                  onClick={() => setDeleteUserOpen(false)}
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-zinc-200 bg-white text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={deleteUserBusy}
+                  onClick={() => void deleteLinkedUser()}
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg bg-red-600 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deleteUserBusy ? "Deleting…" : "Delete user"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
