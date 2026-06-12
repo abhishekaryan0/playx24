@@ -22,32 +22,14 @@ export default function LoginPage() {
   return (
     <div className="min-h-[100dvh] bg-[var(--app-bg)]">
       <div className="mx-auto grid min-h-[100dvh] w-full max-w-[1400px] grid-cols-1 lg:grid-cols-2">
-        <aside className="relative hidden overflow-hidden lg:block">
+        <aside className="relative hidden overflow-hidden bg-[#0d2818] lg:block">
           <Image
-            src="/images/login-left-bg.jpg"
-            alt=""
+            src="/images/login-wallet-agent.png"
+            alt="Become a Wallet Agent — Earn More. Serve More. Grow More."
             fill
             priority
-            className="object-cover"
+            className="object-contain object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-300/40 via-sky-200/25 to-fuchsia-300/30" />
-
-          <div className="absolute left-10 top-10 flex items-center gap-3">
-            <Image
-              src="/images/play24x-logo.png"
-              alt="Play24X"
-              width={180}
-              height={72}
-              priority
-            />
-          </div>
-
-          <div className="absolute bottom-8 left-10 right-10 max-w-xl text-xs leading-5 text-white/80 drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]">
-            Play24x (play24x.com) is an online gaming and sports betting
-            platform. It includes a variety of digital gambling experiences,
-            including a sportsbook for betting on events like the ICC Men&apos;s
-            T20 World Cup, and various slot games and live casino options.
-          </div>
         </aside>
 
         <main className="app-shell-pad flex items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:px-16">
