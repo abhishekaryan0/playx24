@@ -1131,7 +1131,7 @@ export default function MyApplicationPage() {
                   <div className="grid gap-3 sm:grid-cols-4">
                     <StatCard
                       title="Commission"
-                      value="0"
+                      value={finance.commission.toLocaleString()}
                       tone="amber"
                       icon={
                         <svg
