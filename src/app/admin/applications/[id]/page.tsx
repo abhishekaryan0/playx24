@@ -12,8 +12,14 @@ import {
 import { AdminHeader } from "../../_components/AdminHeader";
 import { resolvePublicUploadUrl } from "@/lib/upload-url";
 import { downloadCsvStatement } from "@/app/my-application/_components/utils";
+import {
+  TablePagination,
+  TransactionTruncationNotice,
+  useClientTablePagination,
+} from "@/app/my-application/_components/table-pagination";
 import { formatCommissionPercent, getCommissionTier } from "@/lib/commission-tier";
 import { runDeleteUserFlow } from "@/lib/admin-delete-user";
+import type { FinanceSummary } from "@/lib/finance-summary";
 
 type ApplicationDetail = {
   id: string;
@@ -450,6 +456,8 @@ export default function AdminApplicationViewPage() {
     | "statement"
   >("profile");
   const [tx, setTx] = useState<TransactionRow[]>([]);
+  const [financeSummary, setFinanceSummary] = useState<FinanceSummary | null>(null);
+  const [txTruncated, setTxTruncated] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [txActionId, setTxActionId] = useState<string | null>(null);
@@ -539,34 +547,14 @@ export default function AdminApplicationViewPage() {
   const adminSubmittedRows = useMemo(() => adminDeposits, [adminDeposits]);
 
   const finance = useMemo(() => {
-    const approved = tx.filter((t) => t.status === "APPROVED");
-    const cashIn = approved
-      .filter((t) => t.type === "USER_DEPOSIT")
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
-    const cashOut = approved
-      .filter((t) => t.type === "ADMIN_DEPOSIT" || t.type === "USER_WITHDRAW")
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
-    const balance = cashIn - cashOut;
+    const cashIn = financeSummary?.cashIn ?? 0;
+    const cashOut = financeSummary?.cashOut ?? 0;
+    const balance = financeSummary?.balance ?? 0;
+    const commission = financeSummary?.commission ?? 0;
+    const actSeconds = financeSummary?.actSeconds ?? null;
     const tier = getCommissionTier(cashIn);
-    const commission = Math.round(cashIn * tier.rate);
-
-    const approvedUserDeposits = approved.filter(
-      (t) => t.type === "USER_DEPOSIT" && t.adminId,
-    );
-    const actSeconds =
-      approvedUserDeposits.length === 0
-        ? null
-        : approvedUserDeposits.reduce((sum, t) => {
-            const a = new Date(t.createdAt).getTime();
-            const b = new Date(t.updatedAt).getTime();
-            const d = Number.isFinite(a) && Number.isFinite(b) ? Math.max(0, b - a) : 0;
-            return sum + d;
-          }, 0) /
-          approvedUserDeposits.length /
-          1000;
-
     return { cashIn, cashOut, balance, tier, commission, actSeconds };
-  }, [tx]);
+  }, [financeSummary]);
 
   function formatAct(seconds: number | null) {
     if (seconds == null || !Number.isFinite(seconds)) return "—";
@@ -595,6 +583,15 @@ export default function AdminApplicationViewPage() {
       return { t, withdrawal, deposit, running };
     });
   }, [statementRows]);
+
+  const depositRequestPagination = useClientTablePagination(depositRequests);
+  const commissionRecordPagination = useClientTablePagination(commissionRecords);
+  const adminDepositPagination = useClientTablePagination(adminSubmittedRows);
+  const statementPagination = useClientTablePagination(statementTableRows);
+
+  useEffect(() => {
+    statementPagination.resetPage();
+  }, [statementDate, statementQuery, statementPagination.resetPage]);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -650,10 +647,17 @@ export default function AdminApplicationViewPage() {
         return;
       }
       const json = (await res.json().catch(() => null)) as
-        | { transactions?: TransactionRow[]; error?: string }
+        | {
+            transactions?: TransactionRow[];
+            financeSummary?: FinanceSummary;
+            pagination?: { truncated?: boolean };
+            error?: string;
+          }
         | null;
       if (!res.ok) throw new Error(json?.error || "Failed to load transactions");
       setTx(((json?.transactions ?? []) as TransactionRow[]) ?? []);
+      setFinanceSummary(json?.financeSummary ?? null);
+      setTxTruncated(Boolean(json?.pagination?.truncated));
     } catch (e: unknown) {
       setTxError(e instanceof Error ? e.message : "Failed to load transactions");
     } finally {
@@ -900,6 +904,8 @@ export default function AdminApplicationViewPage() {
               User submitted deposits for this user.
             </p>
 
+            <TransactionTruncationNotice truncated={txTruncated} />
+
             {txError ? (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                 {txError}
@@ -933,7 +939,7 @@ export default function AdminApplicationViewPage() {
                       </td>
                     </tr>
                   ) : (
-                    depositRequests.map((t) => (
+                    depositRequestPagination.rows.map((t) => (
                       <tr key={t.id} className="hover:bg-emerald-50/40">
                         <td className="px-4 py-3">
                           <TxStatusBadge status={t.status} />
@@ -996,6 +1002,13 @@ export default function AdminApplicationViewPage() {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              page={depositRequestPagination.page}
+              totalPages={depositRequestPagination.totalPages}
+              total={depositRequestPagination.total}
+              pageSize={depositRequestPagination.pageSize}
+              onPageChange={depositRequestPagination.setPage}
+            />
           </Section>
         ) : null}
 
@@ -1004,6 +1017,8 @@ export default function AdminApplicationViewPage() {
         {tab === "commissionRecord" ? (
           <Section title="Commission record">
             <p className="text-sm text-zinc-600">User withdraw requests for this user.</p>
+
+            <TransactionTruncationNotice truncated={txTruncated} />
 
             {txError ? (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -1037,7 +1052,7 @@ export default function AdminApplicationViewPage() {
                       </td>
                     </tr>
                   ) : (
-                    commissionRecords.map((t) => (
+                    commissionRecordPagination.rows.map((t) => (
                       <tr key={t.id} className="hover:bg-emerald-50/40">
                         <td className="px-5 py-4 text-xs text-zinc-700">
                           {new Date(t.createdAt).toLocaleString()}
@@ -1092,11 +1107,19 @@ export default function AdminApplicationViewPage() {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              page={commissionRecordPagination.page}
+              totalPages={commissionRecordPagination.totalPages}
+              total={commissionRecordPagination.total}
+              pageSize={commissionRecordPagination.pageSize}
+              onPageChange={commissionRecordPagination.setPage}
+            />
           </Section>
         ) : null}
 
         {tab === "statement" ? (
           <div className="space-y-6">
+            <TransactionTruncationNotice truncated={txTruncated} />
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="rounded-2xl border border-emerald-900/10 bg-white p-4 shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
                 <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
@@ -1257,7 +1280,7 @@ export default function AdminApplicationViewPage() {
                         </td>
                       </tr>
                     ) : null}
-                    {(!txLoading ? statementTableRows : []).map(
+                    {(!txLoading ? statementPagination.rows : []).map(
                       ({ t, withdrawal, deposit, running }) => (
                         <tr key={t.id} className="hover:bg-emerald-50/40">
                           <td className="px-5 py-4 text-xs text-zinc-700">
@@ -1292,6 +1315,13 @@ export default function AdminApplicationViewPage() {
                   </tbody>
                 </table>
               </div>
+              <TablePagination
+                page={statementPagination.page}
+                totalPages={statementPagination.totalPages}
+                total={statementPagination.total}
+                pageSize={statementPagination.pageSize}
+                onPageChange={statementPagination.setPage}
+              />
             </div>
           </div>
         ) : null}
@@ -1324,6 +1354,7 @@ export default function AdminApplicationViewPage() {
 
         {tab === "finance" ? (
           <Section title="Admin deposit">
+            <TransactionTruncationNotice truncated={txTruncated} />
             <div className="overflow-x-auto rounded-xl border border-emerald-900/10">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead>
@@ -1350,7 +1381,7 @@ export default function AdminApplicationViewPage() {
                       </td>
                     </tr>
                   ) : (
-                    adminSubmittedRows.map((t) => (
+                    adminDepositPagination.rows.map((t) => (
                       <tr key={t.id} className="hover:bg-emerald-50/40">
                         <td className="px-4 py-3">
                           <TxStatusBadge status={t.status} />
@@ -1389,6 +1420,13 @@ export default function AdminApplicationViewPage() {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              page={adminDepositPagination.page}
+              totalPages={adminDepositPagination.totalPages}
+              total={adminDepositPagination.total}
+              pageSize={adminDepositPagination.pageSize}
+              onPageChange={adminDepositPagination.setPage}
+            />
           </Section>
         ) : null}
 

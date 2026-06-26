@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
+import { getFinanceSummaryForUser } from "@/lib/finance-summary";
 import { prisma } from "@/lib/prisma";
 import { normalizeMobile } from "@/lib/mobile";
+import {
+  buildTransactionPagination,
+  parseTransactionListParams,
+  TX_SCOPED_ALL_MAX,
+} from "@/lib/transaction-list";
 
 export const runtime = "nodejs";
 
@@ -45,14 +51,37 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const transactions = await prisma.transaction.findMany({
-    // Return all statuses for lists (statement filters APPROVED in UI).
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 200,
+  const listParams = parseTransactionListParams(url.searchParams, true);
+  const where = { userId: user.id };
+
+  const [total, transactions, financeSummary] = await Promise.all([
+    prisma.transaction.count({ where }),
+    listParams.fetchAll
+      ? prisma.transaction.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          take: TX_SCOPED_ALL_MAX,
+        })
+      : prisma.transaction.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip: (listParams.page - 1) * listParams.pageSize,
+          take: listParams.pageSize,
+        }),
+    getFinanceSummaryForUser(user.id),
+  ]);
+
+  const truncated = listParams.fetchAll && total > TX_SCOPED_ALL_MAX;
+  const pagination = buildTransactionPagination({
+    total,
+    page: listParams.page,
+    pageSize: listParams.pageSize,
+    returned: transactions.length,
+    fetchAll: listParams.fetchAll,
+    truncated,
   });
 
-  return NextResponse.json({ transactions });
+  return NextResponse.json({ transactions, financeSummary, pagination });
 }
 
 export async function POST(req: Request) {

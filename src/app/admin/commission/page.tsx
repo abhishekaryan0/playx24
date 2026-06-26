@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { TablePagination } from "@/app/my-application/_components/table-pagination";
+import type { TransactionPagination } from "@/lib/transaction-list";
 import { AdminHeader } from "../_components/AdminHeader";
 
 type TxRow = {
@@ -62,6 +64,8 @@ function txDisplayId(tx: TxRow): string {
 
 export default function AdminCommissionPage() {
   const [rows, setRows] = useState<TxRow[]>([]);
+  const [pagination, setPagination] = useState<TransactionPagination | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
@@ -73,22 +77,29 @@ export default function AdminCommissionPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/transactions?type=USER_WITHDRAW");
+      const res = await fetch(
+        `/api/admin/transactions?type=USER_WITHDRAW&page=${page}`,
+      );
       if (res.status === 401) {
         window.location.href = "/admin";
         return;
       }
       const json = (await res.json().catch(() => null)) as
-        | { transactions?: TxRow[]; error?: string }
+        | {
+            transactions?: TxRow[];
+            pagination?: TransactionPagination;
+            error?: string;
+          }
         | null;
       if (!res.ok) throw new Error(json?.error || "Failed to load");
       setRows((json?.transactions ?? []) as TxRow[]);
+      setPagination(json?.pagination ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     load();
@@ -231,6 +242,15 @@ export default function AdminCommissionPage() {
               </tbody>
             </table>
           </div>
+          {pagination ? (
+            <TablePagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              pageSize={pagination.pageSize}
+              onPageChange={setPage}
+            />
+          ) : null}
         </div>
 
         <p className="mt-4 text-xs text-zinc-400">

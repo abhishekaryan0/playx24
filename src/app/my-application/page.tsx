@@ -7,6 +7,7 @@ import { AdminHeader } from "@/app/admin/_components/AdminHeader";
 import { applicationTypeLabel } from "@/lib/application-type";
 import { resolvePublicUploadUrl } from "@/lib/upload-url";
 import { formatCommissionPercent, getCommissionTier } from "@/lib/commission-tier";
+import type { FinanceSummary } from "@/lib/finance-summary";
 import type {
   ApiResponse,
   ApplicationDetail,
@@ -15,6 +16,11 @@ import type {
   TransactionRow,
 } from "./_components/types";
 import { downloadCsvStatement, isRecord } from "./_components/utils";
+import {
+  TablePagination,
+  TransactionTruncationNotice,
+  useClientTablePagination,
+} from "./_components/table-pagination";
 import {
   DashTab,
   FinanceRow,
@@ -128,6 +134,8 @@ export default function MyApplicationPage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ApiResponse | null>(null);
   const [tx, setTx] = useState<TransactionRow[]>([]);
+  const [financeSummary, setFinanceSummary] = useState<FinanceSummary | null>(null);
+  const [txTruncated, setTxTruncated] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
@@ -250,10 +258,17 @@ export default function MyApplicationPage() {
         `/api/me/transactions?mobile=${encodeURIComponent(mobile)}`,
       );
       const json = (await res.json().catch(() => null)) as
-        | { transactions?: TransactionRow[]; error?: string }
+        | {
+            transactions?: TransactionRow[];
+            financeSummary?: FinanceSummary;
+            pagination?: { truncated?: boolean };
+            error?: string;
+          }
         | null;
       if (!res.ok) throw new Error(json?.error || "Failed to load transactions");
       setTx((json?.transactions as TransactionRow[]) ?? []);
+      setFinanceSummary(json?.financeSummary ?? null);
+      setTxTruncated(Boolean(json?.pagination?.truncated));
     } catch (e: unknown) {
       const msg =
         isRecord(e) && typeof e.message === "string"
@@ -489,34 +504,14 @@ export default function MyApplicationPage() {
   }, [statementRows]);
 
   const finance = useMemo(() => {
-    const approved = tx.filter((t) => t.status === "APPROVED");
-    const cashIn = approved
-      .filter((t) => t.type === "USER_DEPOSIT")
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
-    const cashOut = approved
-      .filter((t) => t.type === "ADMIN_DEPOSIT" || t.type === "USER_WITHDRAW")
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
-    const balance = cashIn - cashOut;
+    const cashIn = financeSummary?.cashIn ?? 0;
+    const cashOut = financeSummary?.cashOut ?? 0;
+    const balance = financeSummary?.balance ?? 0;
+    const commission = financeSummary?.commission ?? 0;
+    const actSeconds = financeSummary?.actSeconds ?? null;
     const tier = getCommissionTier(cashIn);
-    const commission = Math.round(cashIn * tier.rate);
-
-    const approvedUserDeposits = approved.filter(
-      (t) => t.type === "USER_DEPOSIT" && t.adminId,
-    );
-    const actSeconds =
-      approvedUserDeposits.length === 0
-        ? null
-        : approvedUserDeposits.reduce((sum, t) => {
-            const a = new Date(t.createdAt).getTime();
-            const b = new Date(t.updatedAt).getTime();
-            const d = Number.isFinite(a) && Number.isFinite(b) ? Math.max(0, b - a) : 0;
-            return sum + d;
-          }, 0) /
-          approvedUserDeposits.length /
-          1000;
-
     return { cashIn, cashOut, balance, tier, commission, actSeconds };
-  }, [tx]);
+  }, [financeSummary]);
 
   function formatAct(seconds: number | null) {
     if (seconds == null || !Number.isFinite(seconds)) return "—";
@@ -545,6 +540,15 @@ export default function MyApplicationPage() {
       return { t, withdrawal, deposit, running };
     });
   }, [statementRows]);
+
+  const depositRequestPagination = useClientTablePagination(depositRequests);
+  const payRecordPagination = useClientTablePagination(payRecords);
+  const commissionRecordPagination = useClientTablePagination(commissionRecords);
+  const statementPagination = useClientTablePagination(statementTableRows);
+
+  useEffect(() => {
+    statementPagination.resetPage();
+  }, [statementDate, statementQuery, statementPagination.resetPage]);
 
   async function respondToAdminDeposit(id: string, next: "APPROVED" | "DECLINED") {
     try {
@@ -827,6 +831,8 @@ export default function MyApplicationPage() {
                   Admin submitted deposits will appear here. You can accept or reject.
                 </p>
 
+                <TransactionTruncationNotice truncated={txTruncated} />
+
                 {txError ? (
                   <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                     {txError}
@@ -866,7 +872,7 @@ export default function MyApplicationPage() {
                           </td>
                         </tr>
                       ) : (
-                        depositRequests.map((t) => (
+                        depositRequestPagination.rows.map((t) => (
                           <tr key={t.id} className="hover:bg-emerald-50/40">
                             <td className="px-4 py-3">
                               <TxStatusBadge status={t.status} />
@@ -930,6 +936,13 @@ export default function MyApplicationPage() {
                     </tbody>
                   </table>
                 </div>
+                <TablePagination
+                  page={depositRequestPagination.page}
+                  totalPages={depositRequestPagination.totalPages}
+                  total={depositRequestPagination.total}
+                  pageSize={depositRequestPagination.pageSize}
+                  onPageChange={depositRequestPagination.setPage}
+                />
               </Section>
             ) : null}
 
@@ -938,6 +951,8 @@ export default function MyApplicationPage() {
                 <p className="text-sm text-zinc-600">
                   Your submitted deposits (pending/approved/declined).
                 </p>
+
+                <TransactionTruncationNotice truncated={txTruncated} />
 
                 {txError ? (
                   <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -971,7 +986,7 @@ export default function MyApplicationPage() {
                           </td>
                         </tr>
                       ) : (
-                        payRecords.map((t) => (
+                        payRecordPagination.rows.map((t) => (
                           <tr key={t.id} className="hover:bg-emerald-50/40">
                             <td className="px-4 py-3">
                               <TxStatusBadge status={t.status} />
@@ -1013,6 +1028,13 @@ export default function MyApplicationPage() {
                     </tbody>
                   </table>
                 </div>
+                <TablePagination
+                  page={payRecordPagination.page}
+                  totalPages={payRecordPagination.totalPages}
+                  total={payRecordPagination.total}
+                  pageSize={payRecordPagination.pageSize}
+                  onPageChange={payRecordPagination.setPage}
+                />
               </Section>
             ) : null}
 
@@ -1021,6 +1043,8 @@ export default function MyApplicationPage() {
                 <p className="text-sm text-zinc-600">
                   Your withdraw requests (pending/approved/declined).
                 </p>
+
+                <TransactionTruncationNotice truncated={txTruncated} />
 
                 {txError ? (
                   <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -1054,7 +1078,7 @@ export default function MyApplicationPage() {
                           </td>
                         </tr>
                       ) : (
-                        commissionRecords.map((t) => (
+                        commissionRecordPagination.rows.map((t) => (
                           <tr key={t.id} className="hover:bg-emerald-50/40">
                             <td className="px-5 py-4 text-xs text-zinc-700">
                               {new Date(t.createdAt).toLocaleString()}
@@ -1090,11 +1114,19 @@ export default function MyApplicationPage() {
                     </tbody>
                   </table>
                 </div>
+                <TablePagination
+                  page={commissionRecordPagination.page}
+                  totalPages={commissionRecordPagination.totalPages}
+                  total={commissionRecordPagination.total}
+                  pageSize={commissionRecordPagination.pageSize}
+                  onPageChange={commissionRecordPagination.setPage}
+                />
               </Section>
             ) : null}
 
             {tab === "statement" ? (
               <div className="space-y-6">
+                <TransactionTruncationNotice truncated={txTruncated} />
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="grid gap-3 sm:grid-cols-4">
                     <StatCard
@@ -1296,7 +1328,7 @@ export default function MyApplicationPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-100">
-                        {statementTableRows.map(({ t, withdrawal, deposit, running }) => (
+                        {statementPagination.rows.map(({ t, withdrawal, deposit, running }) => (
                           <tr key={t.id} className="hover:bg-emerald-50/40">
                             <td className="px-5 py-4 text-xs text-zinc-700">
                               {new Date(t.createdAt).toLocaleString()}
@@ -1332,6 +1364,13 @@ export default function MyApplicationPage() {
                       </tbody>
                     </table>
                   </div>
+                  <TablePagination
+                    page={statementPagination.page}
+                    totalPages={statementPagination.totalPages}
+                    total={statementPagination.total}
+                    pageSize={statementPagination.pageSize}
+                    onPageChange={statementPagination.setPage}
+                  />
                 </div>
               </div>
             ) : null}

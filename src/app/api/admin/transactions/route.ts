@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getFinanceSummaryForUser } from "@/lib/finance-summary";
 import { prisma } from "@/lib/prisma";
+import {
+  buildTransactionPagination,
+  parseTransactionListParams,
+  TX_SCOPED_ALL_MAX,
+} from "@/lib/transaction-list";
 import { COOKIE_NAME, getAdminSecret, verifyAdminSession } from "@/lib/admin-session";
 import { normalizeMobile } from "@/lib/mobile";
 import { configureWebPush, getWebPushConfig, webpush } from "@/lib/web-push";
@@ -27,17 +33,43 @@ export async function GET(req: Request) {
     ? await prisma.user.findUnique({ where: { mobile }, select: { id: true } })
     : null;
 
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      ...(user?.id ? { userId: user.id } : {}),
-      ...(type ? { type: type as any } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: 500,
-    include: { user: { select: { mobile: true } } },
+  const scopedToUser = Boolean(user?.id);
+  const listParams = parseTransactionListParams(url.searchParams, scopedToUser);
+  const where = {
+    ...(user?.id ? { userId: user.id } : {}),
+    ...(type ? { type: type as "ADMIN_DEPOSIT" | "USER_DEPOSIT" | "USER_WITHDRAW" } : {}),
+  };
+
+  const [total, transactions, financeSummary] = await Promise.all([
+    prisma.transaction.count({ where }),
+    listParams.fetchAll
+      ? prisma.transaction.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          take: TX_SCOPED_ALL_MAX,
+          include: { user: { select: { mobile: true } } },
+        })
+      : prisma.transaction.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip: (listParams.page - 1) * listParams.pageSize,
+          take: listParams.pageSize,
+          include: { user: { select: { mobile: true } } },
+        }),
+    user?.id ? getFinanceSummaryForUser(user.id) : Promise.resolve(null),
+  ]);
+
+  const truncated = listParams.fetchAll && total > TX_SCOPED_ALL_MAX;
+  const pagination = buildTransactionPagination({
+    total,
+    page: listParams.page,
+    pageSize: listParams.pageSize,
+    returned: transactions.length,
+    fetchAll: listParams.fetchAll,
+    truncated,
   });
 
-  return NextResponse.json({ transactions });
+  return NextResponse.json({ transactions, financeSummary, pagination });
 }
 
 type SubmitBody = {
