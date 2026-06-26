@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getCommissionTier } from "@/lib/commission-tier";
+import { calculateProgressiveCommission } from "@/lib/commission-tier";
 
 export type FinanceSummary = {
   cashIn: number;
@@ -42,8 +42,7 @@ export async function getFinanceSummaryForUser(
   const cashOut =
     (adminDepositAgg._sum.amount ?? 0) + (userWithdrawAgg._sum.amount ?? 0);
   const balance = cashIn - cashOut;
-  const tier = getCommissionTier(cashIn);
-  const commission = Math.round(cashIn * tier.rate);
+  const commission = calculateProgressiveCommission(cashIn);
 
   let actSeconds: number | null = null;
   if (actDeposits.length > 0) {

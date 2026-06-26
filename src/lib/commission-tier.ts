@@ -51,12 +51,38 @@ const TIERS: CommissionTier[] = [
   },
 ];
 
+const COMMISSION_SLABS: { from: number; to: number | null; rate: number }[] = [
+  { from: 0, to: 15 * LAKH, rate: TIERS[0].rate },
+  { from: 15 * LAKH, to: 25 * LAKH, rate: TIERS[1].rate },
+  { from: 25 * LAKH, to: 35 * LAKH, rate: TIERS[2].rate },
+  { from: 35 * LAKH, to: null, rate: TIERS[3].rate },
+];
+
 export function getCommissionTier(totalApprovedDeposits: number): CommissionTier {
   const total = Number.isFinite(totalApprovedDeposits) ? totalApprovedDeposits : 0;
   if (total >= 35 * LAKH) return TIERS[3];
   if (total >= 25 * LAKH) return TIERS[2];
   if (total >= 15 * LAKH) return TIERS[1];
   return TIERS[0];
+}
+
+/** Sum commission per slab — each tier rate applies only to cash-in within that band. */
+export function calculateProgressiveCommission(totalApprovedDeposits: number): number {
+  const total = Number.isFinite(totalApprovedDeposits)
+    ? Math.max(0, totalApprovedDeposits)
+    : 0;
+
+  let commission = 0;
+  for (const slab of COMMISSION_SLABS) {
+    if (total <= slab.from) break;
+    const slabEnd = slab.to ?? Number.POSITIVE_INFINITY;
+    const amountInSlab = Math.min(total, slabEnd) - slab.from;
+    if (amountInSlab > 0) {
+      commission += amountInSlab * slab.rate;
+    }
+  }
+
+  return Math.round(commission);
 }
 
 export function formatCommissionPercent(rate: number) {
