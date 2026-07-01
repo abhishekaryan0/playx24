@@ -10,11 +10,16 @@ export type FinanceSummary = {
   actSeconds: number | null;
 };
 
-/** Gross slab commission minus any cash-out above approved deposits. */
-export function calculateAvailableCommission(cashIn: number, cashOut: number): number {
-  const gross = calculateProgressiveCommission(cashIn);
-  const overWithdrawal = Math.max(0, cashOut - cashIn);
-  return Math.max(0, gross - overWithdrawal);
+/** Gross slab commission minus approved commission withdrawals only. */
+export function calculateAvailableCommission(
+  grossCommission: number,
+  commissionWithdrawn: number,
+): number {
+  const withdrawn = Number.isFinite(commissionWithdrawn)
+    ? Math.max(0, commissionWithdrawn)
+    : 0;
+  const gross = Number.isFinite(grossCommission) ? Math.max(0, grossCommission) : 0;
+  return Math.max(0, gross - withdrawn);
 }
 
 export async function getFinanceSummaryForUser(
@@ -47,11 +52,14 @@ export async function getFinanceSummaryForUser(
     ]);
 
   const cashIn = cashInAgg._sum.amount ?? 0;
-  const cashOut =
-    (adminDepositAgg._sum.amount ?? 0) + (userWithdrawAgg._sum.amount ?? 0);
+  const commissionWithdrawn = userWithdrawAgg._sum.amount ?? 0;
+  const cashOut = adminDepositAgg._sum.amount ?? 0;
   const balance = cashIn - cashOut;
   const commission = calculateProgressiveCommission(cashIn);
-  const availableCommission = calculateAvailableCommission(cashIn, cashOut);
+  const availableCommission = calculateAvailableCommission(
+    commission,
+    commissionWithdrawn,
+  );
 
   let actSeconds: number | null = null;
   if (actDeposits.length > 0) {

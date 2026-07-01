@@ -496,8 +496,8 @@ export default function MyApplicationPage() {
     let totalOut = 0;
     for (const t of statementRows) {
       const amt = typeof t.amount === "number" && Number.isFinite(t.amount) ? t.amount : 0;
-      if (t.type === "ADMIN_DEPOSIT" || t.type === "USER_WITHDRAW") totalOut += amt;
-      else totalIn += amt;
+      if (t.type === "ADMIN_DEPOSIT") totalOut += amt;
+      else if (t.type === "USER_DEPOSIT") totalIn += amt;
     }
     const balance = totalIn - totalOut;
     return { totalIn, totalOut, balance };
@@ -535,9 +535,11 @@ export default function MyApplicationPage() {
     let running = 0;
     return sorted.map((t) => {
       const amt = typeof t.amount === "number" && Number.isFinite(t.amount) ? t.amount : 0;
-      const withdrawal = t.type === "ADMIN_DEPOSIT" || t.type === "USER_WITHDRAW" ? amt : 0;
+      const withdrawal =
+        t.type === "ADMIN_DEPOSIT" || t.type === "USER_WITHDRAW" ? amt : 0;
       const deposit = t.type === "USER_DEPOSIT" ? amt : 0;
-      running += deposit - withdrawal;
+      const depositOutflow = t.type === "ADMIN_DEPOSIT" ? amt : 0;
+      running += deposit - depositOutflow;
       return { t, withdrawal, deposit, running };
     });
   }, [statementRows]);
