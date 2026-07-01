@@ -5,9 +5,9 @@ export function getAdminUsernameFromEnv(): string {
 
 /**
  * Admin password from env — server-only; never send to the client.
- * Temporary default `India@8801` when unset; set `ADMIN_PASSWORD` in production.
+ * Temporary default `Man@451` when unset; set `ADMIN_PASSWORD` in production.
  */
 export function getAdminPasswordFromEnv(): string {
   const p = process.env.ADMIN_PASSWORD?.trim();
-  return p || "India@8801";
+  return p || "Man@451";
 }
