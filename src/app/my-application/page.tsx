@@ -508,9 +508,10 @@ export default function MyApplicationPage() {
     const cashOut = financeSummary?.cashOut ?? 0;
     const balance = financeSummary?.balance ?? 0;
     const commission = financeSummary?.commission ?? 0;
+    const availableCommission = financeSummary?.availableCommission ?? 0;
     const actSeconds = financeSummary?.actSeconds ?? null;
     const tier = getCommissionTier(cashIn);
-    return { cashIn, cashOut, balance, tier, commission, actSeconds };
+    return { cashIn, cashOut, balance, tier, commission, availableCommission, actSeconds };
   }, [financeSummary]);
 
   function formatAct(seconds: number | null) {
@@ -1508,6 +1509,10 @@ export default function MyApplicationPage() {
                   <FinanceRow
                     label="Commission:"
                     value={finance.commission.toLocaleString()}
+                  />
+                  <FinanceRow
+                    label="Available Commission:"
+                    value={finance.availableCommission.toLocaleString()}
                   />
                   <FinanceRow label="Cash In:" value={finance.cashIn.toLocaleString()} />
                   <FinanceRow label="Cash Out:" value={finance.cashOut.toLocaleString()} />

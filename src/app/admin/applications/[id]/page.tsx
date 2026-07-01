@@ -551,9 +551,10 @@ export default function AdminApplicationViewPage() {
     const cashOut = financeSummary?.cashOut ?? 0;
     const balance = financeSummary?.balance ?? 0;
     const commission = financeSummary?.commission ?? 0;
+    const availableCommission = financeSummary?.availableCommission ?? 0;
     const actSeconds = financeSummary?.actSeconds ?? null;
     const tier = getCommissionTier(cashIn);
-    return { cashIn, cashOut, balance, tier, commission, actSeconds };
+    return { cashIn, cashOut, balance, tier, commission, availableCommission, actSeconds };
   }, [financeSummary]);
 
   function formatAct(seconds: number | null) {
@@ -1126,7 +1127,7 @@ export default function AdminApplicationViewPage() {
                   Commission
                 </p>
                 <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">
-                  0
+                  {finance.commission.toLocaleString()}
                 </p>
               </div>
               <div className="rounded-2xl border border-emerald-900/10 bg-white p-4 shadow-[0_8px_24px_rgba(27,67,50,0.06)] ring-1 ring-emerald-900/[0.03]">
@@ -1340,6 +1341,10 @@ export default function AdminApplicationViewPage() {
             <Section title="Finance">
               <div className="grid gap-3">
                 <FinanceRow label="Commission:" value={finance.commission.toLocaleString()} />
+                <FinanceRow
+                  label="Available Commission:"
+                  value={finance.availableCommission.toLocaleString()}
+                />
                 <FinanceRow label="Cash In:" value={finance.cashIn.toLocaleString()} />
                 <FinanceRow label="Cash Out:" value={finance.cashOut.toLocaleString()} />
                 <FinanceRow label="Balance" value={finance.balance.toLocaleString()} />
@@ -1599,6 +1604,10 @@ export default function AdminApplicationViewPage() {
               <Section title="Finance">
                 <div className="grid gap-3">
                   <FinanceRow label="Commission:" value={finance.commission.toLocaleString()} />
+                  <FinanceRow
+                    label="Available Commission:"
+                    value={finance.availableCommission.toLocaleString()}
+                  />
                   <FinanceRow label="Cash In:" value={finance.cashIn.toLocaleString()} />
                   <FinanceRow label="Cash Out:" value={finance.cashOut.toLocaleString()} />
                   <FinanceRow label="Balance" value={finance.balance.toLocaleString()} />
